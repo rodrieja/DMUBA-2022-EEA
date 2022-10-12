@@ -1,11 +1,26 @@
 ---
-title: "R Notebook"
-output: html_notebook
+title: "EEA - TP 1"
+author: "Rodriguez, Alejandro"
+output:
+  html_notebook:
+    theme: spacelab
+    toc: yes
+    toc_float: yes
+    df_print: paged
+  html_document:
+    toc: yes
+    df_print: paged
 ---
 
-This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+# Análisis exploratorios
+Leer el archivo “encuesta_salud_train.csv”. 
 
-Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
+- ¿Qué puede mencionar sobre su estructura y variables?
+- ¿Cómo es la correlación entre las variables numéricas? Utilice y analice en detalle algún gráfico que sirva para sacar conclusiones sobre la asociación de variables realizando apertura por género. En particular, ¿cómo es la correlación entre la variable a explicar (peso) y el resto de las variables numéricas?
+- Para las categorías de la variable frecuencia de hambre mensual, analice gráficamente la distribución en términos de frecuencia relativa de:
+  a) El consumo semanal de verdura.
+  b) El consumo semanal de comida grasa.
+- ¿Cuáles son las principales características que observa en estos gráficos?
 
 ```{r}
 plot(cars)

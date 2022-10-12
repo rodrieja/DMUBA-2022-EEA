@@ -1,0 +1,265 @@
+---
+title: "EEA - TP 1"
+author: "Rodriguez, Alejandro"
+output:
+  html_notebook:
+    theme: spacelab
+    toc: yes
+    toc_float: yes
+    df_print: paged
+  html_document:
+    toc: yes
+    df_print: paged
+---
+```{r theme general}
+theme <- theme(text = element_text(size=10),
+               plot.title = element_text(size = 12, face = "bold.italic", hjust = 0.5), 
+               axis.title.x = element_text(size = 10, face="bold", colour='black'),         
+               axis.title.y = element_text(size = 10, face="bold"),
+               panel.border = element_blank(),
+               panel.grid.major = element_blank(),
+               panel.grid.minor = element_blank(), 
+               legend.title = element_text(face="bold"))
+```
+
+```{r, warning=F, message=FALSE}
+library(tidyverse)
+library(tidymodels)
+library(rsample)
+library(ggplot2)
+library(GGally)
+library(corrr)
+
+```
+
+# Análisis exploratorios
+## Enunciado
+Leer el archivo “encuesta_salud_train.csv”. 
+
+- ¿Qué puede mencionar sobre su estructura y variables?
+- ¿Cómo es la correlación entre las variables numéricas? Utilice y analice en detalle algún gráfico que sirva para sacar conclusiones sobre la asociación de variables realizando apertura por género. En particular, ¿cómo es la correlación entre la variable a explicar (peso) y el resto de las variables numéricas?
+- Para las categorías de la variable frecuencia de hambre mensual, analice gráficamente la distribución en términos de frecuencia relativa de:
+  a) El consumo semanal de verdura.
+  b) El consumo semanal de comida grasa.
+- ¿Cuáles son las principales características que observa en estos gráficos?
+
+## Dataset
+Cargamos el dataset y vemos la estructura y algunos datos para tener una idea de con qué vamos a trabajar:
+```{r}
+encuesta_salud_train_csv <- read.csv("datasets/encuesta_salud_train.csv")
+glimpse(encuesta_salud_train_csv)
+```
+
+```{r}
+encuesta_salud_train_csv %>%
+  head()
+```
+```{r}
+tabla_exploratorios =  encuesta_salud_train_csv %>%
+                                      gather(., 
+                                            key = "variables", 
+                                            value = "valores") %>% # agrupamos por las variables del set
+                                      group_by(variables) %>% 
+                                      summarise(valores_unicos = n_distinct(valores),
+                                      porcentaje_faltantes = sum(is.na(valores))/nrow(encuesta_salud_train_csv)*100) %>% 
+                                      arrange(desc(porcentaje_faltantes), valores_unicos) # ordenamos por porcentaje de faltantes y valores unicos
+tabla_exploratorios
+```
+
+Viendo la estructura y un recorte del dataset observo que la mayoría de los campos son categóricos, que aparentemente mantienen una estructura fija (no son texto libre) y podrían haber sido variables numéricas, lo cuál es una transformación que podemos hacer para analizar el comportamiento o generación del los modelos lineales que queremos probar: 
+ - "4 a 6 veces durante los últimos 7 días": al referirse a consumo semanal indicar que es sobre los últimos 7 días, en todos los casos no aporta nada y el valor, que está segmentado en rangos, podría haber sido un número representando el promedio de consumo, días o alguna medida representativa para el relevamiento de la encuesta. 
+ - "No comí comida alta en grasa en los últimos 7 días": podría ser 0 directamente.
+No se observan valores faltantes en las distintas variables, por lo que no es necesario realizar algún trabajo o preocuparse por algún error en las funciones que utilizaremos en los modelos.
+
+## Variables numéricas
+```{r}
+# Genero un data frame con las variables numéricas
+numeric_train_df = encuesta_salud_train_csv %>% dplyr::select(where(is.numeric))
+numeric_train_df = numeric_df[, ! names(numeric_df) %in% c("record"), drop = F]
+numeric_train_df["genero"] = encuesta_salud_train_csv["genero"]
+numeric_train_df %>%
+  head()
+```
+
+```{r}
+# graficamos con ggpairs coloreando por property type
+g <- ggpairs(numeric_train_df, aes(color = genero), 
+          upper = list(continuous = wrap("cor", size = 2, hjust=0.5)), legend = 25, progress=FALSE) + 
+  theme(axis.text.x = element_text(angle = 90, hjust = 1), legend.position = "bottom") + 
+  theme_bw()
+# hacemos un loop para cambiar los colores del gráfico
+for(i in 1:g$nrow) {
+  for(j in 1:g$ncol){
+    g[i,j] <- g[i,j] + 
+      scale_fill_brewer(palette="Dark2") +  
+      scale_color_brewer(palette="Dark2")
+        }
+}
+g 
+```
+
+Analizando las variables numéricas y su distribución por género se pueden observar las siguientes relaciones:
+  
+  - No se observa una fuerte correlación entre las variables. La correlación más fuerte es entre peso y altura con un valor de 0.576
+  - Se detectan algunas tendencias interesantes que diferencian los hábitos por género:
+    - El género masculino realiza más actividad física en promedio que el femenino
+    - El peso en el género masculino tiene más varianza, ya que presenta mayor cantidad de outliers en el boxplot y más separados que el género femenino. 
+    - Sucede lo mismo con la altura, el promedio de la altura masculina es mayor, pero presentan más variabilidad y valores incluso menores que el femenino.
+
+```{r}
+numeric_train_df %>% 
+ correlate() %>% 
+  network_plot(min_cor = 0.01)
+```
+## Variables categóricas
+### Transformaciones para graficar de forma legible
+Tomo los valores presentes en el dataset y genero una nueva variable asignando un nuevo a cada categoría
+
+```{r} 
+encuesta_salud_train_csv %>% distinct(frecuencia_hambre_mensual) %>% select(frecuencia_hambre_mensual)
+encuesta_salud_train_csv %>% distinct(consumo_semanal_verdura) %>% select(consumo_semanal_verdura)
+encuesta_salud_train_csv %>% distinct(consumo_semanal_comida_grasa) %>% select(consumo_semanal_comida_grasa)
+```
+
+```{r}
+encuesta_salud_train_csv["verduras"] = encuesta_salud_train_csv %>% 
+  select(consumo_semanal_verdura) %>% 
+  map(~ str_replace(.x,"No comí verduras ni hortalizas durante los últimos 7 días",'Nunca')) %>% 
+  map(~ str_replace(.x,"1 vez al día",'1/dia')) %>% 
+  map(~ str_replace(.x,"2 veces al día",'2/dia')) %>% 
+  map(~ str_replace(.x,"3 veces al día",'3/dia')) %>% 
+  map(~ str_replace(.x,"4 o más veces al día",'4+/dia')) %>% 
+  map(~ str_replace(.x,"Dato perdido",'Perdido')) %>% 
+  map(~ str_replace(.x,"1 a 3 veces durante los últimos 7 días",'1-3/sem')) %>% 
+  map(~ str_replace(.x,"4 a 6 veces durante los últimos 7 días",'4-6/sem'))
+
+encuesta_salud_train_csv["comida_grasa"] = encuesta_salud_train_csv %>% 
+  select(consumo_semanal_comida_grasa) %>% 
+  map(~ str_replace(.x,"No comí comida alta en grasa en los últimos 7 días",'Nunca')) %>% 
+  map(~ str_replace(.x,"1 vez al día",'1/dia')) %>% 
+  map(~ str_replace(.x,"2 veces al día",'2/dia')) %>% 
+  map(~ str_replace(.x,"3 veces al día",'3/dia')) %>% 
+  map(~ str_replace(.x,"4 o más veces al día",'4+/dia')) %>% 
+  map(~ str_replace(.x,"Dato perdido",'Perdido')) %>% 
+  map(~ str_replace(.x,"1 a 3 veces durante los últimos 7 días",'1-3/sem')) %>% 
+  map(~ str_replace(.x,"4 a 6 veces durante los últimos 7 días",'4-6/sem'))
+
+encuesta_salud_train_csv["hambre_mensual"] = encuesta_salud_train_csv %>% 
+  select(frecuencia_hambre_mensual) %>% 
+  map(~ ifelse(.x == "Nunca", 0, .x)) %>% 
+  map(~ ifelse(.x == "Rara vez", 1, .x)) %>% 
+  map(~ ifelse(.x == "Algunas veces", 2, .x)) %>% 
+  map(~ ifelse(.x == "Casi siempre", 3, .x)) %>% 
+  map(~ ifelse(.x == "Siempre", 4, .x)) %>% 
+  map(~ ifelse(.x == "Dato perdido", -1, .x))
+```
+
+
+#### Frecuencias relativas
+
+```{r}
+mosaicplot(table(encuesta_salud_train_csv$verduras,encuesta_salud_train_csv$hambre_mensual),col=terrain.colors(7:11),main="Distribución hambre mensual - consumo semanal de verduras",ylab="Frecuencia hambre mensual",xlab="Consumo semanal de verduras")
+legend("bottom",cex=0.5,title="Frecuencia hambre mensual",c("-1: Dato perdido","0: Nunca","1: Rara vez","2: Algunas veces ","3: Casi siempre","4: Siempre"),fill=terrain.colors(7:11),horiz=T,xpd=TRUE,inset=c(0, -0.25))
+
+mosaicplot(table(encuesta_salud_train_csv$comida_grasa,encuesta_salud_train_csv$hambre_mensual),col=terrain.colors(7:11),main="Distribución hambre mensual - consumo semanal de comida grasa",ylab="Frecuencia hambre mensual",xlab="Consumo semanal de comida grasa")
+legend("bottom",cex=0.5,title="Frecuencia hambre mensual",c("-1: Dato perdido","0: Nunca","1: Rara vez","2: Algunas veces ","3: Casi siempre","4: Siempre"),fill=terrain.colors(7:11),horiz=T,xpd=TRUE,inset=c(0, -0.25))
+
+```
+
+Observando los gráficos que relacionan la frecuencia de hambre mensual sobre el consumo de vegetales o comidas grasas, se pueden obtener las siguientes conclusiones:
+
+  - El consumo de comida grasa es más "común" que el consumo de vegetales. La proporción de cada categoría es mayor en todos los casos, excepto en "Nunca" que es la categoría que compensa la densidad de las otras.
+  - En el gráfico de comidas grasas, se nota una tendencia de incremento en el porcentaje de personas que pasaron hambre mientras más consumo de comidas grasa realizaron por día, siendo el menor valor en la categoría "4 o más veces al día".
+  - El porcentaje de personas que nunca comieron vegetales es mucho menor al porcentaje de personas que nunca comieron comidas grasas.
+
+
+# Modelo inicial
+Se plantea que una primera alternativa para modelar el peso es:
+
+\begin{align*}
+E(peso) = \beta_0 + \beta_1 altura + \beta_2 edad + \beta_3 genero + \beta_4 diasActividadFisicaSemanal + \beta_5 consumoDiarioAlcohol
+\end{align*}
+
+¿Cuál es la interpretación de cada uno de los coeficientes estimados? ¿Son significativos? ¿El modelo resulta
+significativo para explicar el peso? ¿Qué porcentaje de la variabilidad explica el modelo?
+
+```{r}
+# Cargo los datasets de train y test
+encuesta_salud_train_df <- read.csv("datasets/encuesta_salud_train.csv")
+encuesta_salud_test_df <- read.csv("datasets/encuesta_salud_test.csv")
+```
+
+```{r}
+# ajustamos el modelo lineal múltiple
+modelo_inicial = lm(formula = peso ~ altura + edad + genero + dias_actividad_fisica_semanal + consumo_diario_alcohol, data = encuesta_salud_train_df)
+
+# Resumen del modelo
+tidy_modelo_inicial <- tidy(modelo_inicial, conf.int = TRUE)
+tidy_modelo_inicial
+```
+
+## Interpretación de los coeficientes estimados
+
+  - $\beta_0$ (categoría basal de variable categórica género) = -68.922688070 Kg, es la media del peso para las personas de altura = 0, edad = 0, dias_actividad_fisica_semanal = 0, consumo_diario_alcohol = 0 y son de género Femenino, ya que generoMasculino también tiene que ser 0.
+  - $\beta_0 + \beta_{generoMasculino}$ es la diferencia de los niveles medios del peso para el genero Masculino respecto al generoFemenino, considerando al resto de las variables sin cambio: (-68.922688070 Kg + 1.262643558 Kg = -67.66004 Kg)
+  - $\beta_1$ indica que para cada incremento en cms del valor de la altura, el peso medio esperado en Kg incrementa en 0.650606544, manteniendo el resto de las variables constantes.
+  - $\beta_2$ indica que para cada incremento del valor de la edad en años, el peso medio esperado en Kg varia en 1.406727060, manteniendo el resto de las variables constantes.
+  - $\beta_4$ indica que para cada incremento del valor de la dias_actividad_fisica_semanal en días, el peso medio esperado en Kg varia en -0.087391031, manteniendo el resto de las variables constantes.
+  - $\beta_5$ indica que para cada unidad que incrementa el valor de la consumo_diario_alcohol, el peso medio esperado en Kg varia en 0.007271379, manteniendo el resto de las variables constantes.
+
+## Significatividad
+
+```{r}
+options("scipen"=1)
+tidy_modelo_inicial %>%
+  select(term, statistic, p.value, conf.low, conf.high)
+```
+  - Se observa que en el modelo todas las variables resultan estadístivamente significativas para explicar el peso de las personas, ya que el p.value es < 0.05.
+  - Además, se observa que el intervalo de confianza del 95% de las variables no contienen al 0.
+  - Al tener 2 categorías para género, y ver que resultan estadístivamente significativas para explicar el peso, no es necesario realiza un test de anova para validar la significatividad conjunta entre categorías.
+
+```{r}
+summary(modelo_inicial)
+glance(modelo_inicial)
+```
+
+Observando el summary, a diferencia de lo que marca el resumen de tidy, vemos que el t value de la variable consumo_diario_alcohol no resulta ser significativo.
+
+En base a los resultados obtenidos, podemos interpretar que el modelo es significativo para explicar el peso de las personas. Observamos que el p-value del Test F es menor a 0.05 (p-value = 2.2e-16).
+
+El $R^{2}$ del modelo es de 0.3539
+  
+# Modelo categóricas  
+  
+Se sugiere probar un modelo que incopore el consumo semanal de snacks y una interacción entre el género y
+la edad, en lugar de actividad física y consumo de alcohol:
+
+\begin{align*}
+
+E(peso) = \beta_0 + \beta_1 altura + \beta_2 edad + \beta_3 genero + \beta_4 consumoSemanalSnack + \beta_5 genero * edad
+
+\end{align*}
+
+Además se pide explícitamente que la categoría “No comí comida salada o snacks en los últimos 7 días” de la
+variable consumoSemanalSnacks se encuentre como nivel/categoría basal.
+
+¿Cuál es la interpretación de los coeficientes estimados para las categorías de consumoSemanalSnacks y
+genero * edad? ¿Son significativas? ¿Qué porcentaje de la variabilidad explica el modelo?
+
+En caso de detectar que existen categorías no significativas de la variable consumoSemanalSnacks evaluar
+si la variable es significativa en su conjunto y, en caso afirmativo, proponer una redefinición de las mismas que permita obtener una mayor proporción de categorías significativas individualmente. Luego, analizar si
+existen cambios en la variabilidad explicada por el modelo.
+
+
+
+
+
+
+
+
+# Diagnóstico del modelo
+```{r}
+plot(modelo_inicial)
+```
+
+

@@ -1,0 +1,1 @@
+"0","encuesta_salud_train_csv %>% distinct(frecuencia_hambre_mensual) %>% select(frecuencia_hambre_mensual)"

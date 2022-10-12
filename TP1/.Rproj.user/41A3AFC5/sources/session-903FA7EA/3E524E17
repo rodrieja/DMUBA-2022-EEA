@@ -1,28 +1,27 @@
 {
-    "id": "99FB4EB4",
-    "path": "~/Documents/DMUBA/DMUBA-2022-EEA/TP1/TP1.Rmd",
-    "project_path": "TP1.Rmd",
+    "id": "3E524E17",
+    "path": "~/Downloads/Clase 6 - Regresion Lineal Multiple.Rmd",
+    "project_path": null,
     "type": "r_markdown",
-    "hash": "846096076",
+    "hash": "0",
     "contents": "",
     "dirty": false,
-    "created": 1665583191429.0,
+    "created": 1665589020228.0,
     "source_on_save": false,
-    "relative_order": 1,
+    "relative_order": 2,
     "properties": {
-        "tempName": "Untitled1",
         "chunk_output_type": "inline",
         "source_window_id": "",
         "Source": "Source",
-        "cursorPosition": "3,0",
-        "scrollLine": "0"
+        "cursorPosition": "272,14",
+        "scrollLine": "245"
     },
     "folds": "",
-    "lastKnownWriteTime": 1665583207,
+    "lastKnownWriteTime": 1665589011,
     "encoding": "UTF-8",
     "collab_server": "",
     "source_window": "",
-    "last_content_update": 1665583207748,
+    "last_content_update": 1665589011,
     "read_only": false,
     "read_only_alternatives": []
 }

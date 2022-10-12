@@ -1,0 +1,3 @@
+"0","# Cargo los datasets de train y test"
+"0","encuesta_salud_train_df <- read.csv(""datasets/encuesta_salud_train.csv"")"
+"0","encuesta_salud_test_df <- read.csv(""datasets/encuesta_salud_test.csv"")"

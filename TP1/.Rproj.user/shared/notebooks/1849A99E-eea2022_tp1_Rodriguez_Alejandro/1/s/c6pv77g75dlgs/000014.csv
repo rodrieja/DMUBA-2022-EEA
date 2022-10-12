@@ -1,0 +1,1 @@
+"0","encuesta_salud_train_csv %>% distinct(consumo_semanal_comida_grasa) %>% select(consumo_semanal_comida_grasa)"
