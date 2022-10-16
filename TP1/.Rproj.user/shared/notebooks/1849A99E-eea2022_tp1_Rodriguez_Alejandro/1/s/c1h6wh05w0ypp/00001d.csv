@@ -1,6 +1,0 @@
-"0","# Genero un data frame con las variables numéricas"
-"0","numeric_train_df = encuesta_salud_train_csv %>% dplyr::select(where(is.numeric))"
-"0","numeric_train_df = numeric_df[, ! names(numeric_df) %in% c(""record""), drop = F]"
-"0","numeric_train_df[""genero""] = encuesta_salud_train_csv[""genero""]"
-"0","numeric_train_df %>%"
-"0","  head()"

@@ -29,7 +29,7 @@ library(rsample)
 library(ggplot2)
 library(GGally)
 library(corrr)
-
+library(MASS)
 ```
 
 # Análisis exploratorios
@@ -46,22 +46,22 @@ Leer el archivo “encuesta_salud_train.csv”.
 ## Dataset
 Cargamos el dataset y vemos la estructura y algunos datos para tener una idea de con qué vamos a trabajar:
 ```{r}
-encuesta_salud_train_csv <- read.csv("datasets/encuesta_salud_train.csv")
-glimpse(encuesta_salud_train_csv)
+encuesta_salud_train_df <- read.csv("datasets/encuesta_salud_train.csv")
+glimpse(encuesta_salud_train_df)
 ```
 
 ```{r}
-encuesta_salud_train_csv %>%
+encuesta_salud_train_df %>%
   head()
 ```
 ```{r}
-tabla_exploratorios =  encuesta_salud_train_csv %>%
+tabla_exploratorios =  encuesta_salud_train_df %>%
                                       gather(., 
                                             key = "variables", 
                                             value = "valores") %>% # agrupamos por las variables del set
                                       group_by(variables) %>% 
                                       summarise(valores_unicos = n_distinct(valores),
-                                      porcentaje_faltantes = sum(is.na(valores))/nrow(encuesta_salud_train_csv)*100) %>% 
+                                      porcentaje_faltantes = sum(is.na(valores))/nrow(encuesta_salud_train_df)*100) %>% 
                                       arrange(desc(porcentaje_faltantes), valores_unicos) # ordenamos por porcentaje de faltantes y valores unicos
 tabla_exploratorios
 ```
@@ -74,9 +74,9 @@ No se observan valores faltantes en las distintas variables, por lo que no es ne
 ## Variables numéricas
 ```{r}
 # Genero un data frame con las variables numéricas
-numeric_train_df = encuesta_salud_train_csv %>% dplyr::select(where(is.numeric))
+numeric_train_df = encuesta_salud_train_df %>% dplyr::select(where(is.numeric))
 numeric_train_df = numeric_df[, ! names(numeric_df) %in% c("record"), drop = F]
-numeric_train_df["genero"] = encuesta_salud_train_csv["genero"]
+numeric_train_df["genero"] = encuesta_salud_train_df["genero"]
 numeric_train_df %>%
   head()
 ```
@@ -116,13 +116,13 @@ numeric_train_df %>%
 Tomo los valores presentes en el dataset y genero una nueva variable asignando un nuevo a cada categoría
 
 ```{r} 
-encuesta_salud_train_csv %>% distinct(frecuencia_hambre_mensual) %>% select(frecuencia_hambre_mensual)
-encuesta_salud_train_csv %>% distinct(consumo_semanal_verdura) %>% select(consumo_semanal_verdura)
-encuesta_salud_train_csv %>% distinct(consumo_semanal_comida_grasa) %>% select(consumo_semanal_comida_grasa)
+encuesta_salud_train_df %>% distinct(frecuencia_hambre_mensual) %>% select(frecuencia_hambre_mensual)
+encuesta_salud_train_df %>% distinct(consumo_semanal_verdura) %>% select(consumo_semanal_verdura)
+encuesta_salud_train_df %>% distinct(consumo_semanal_comida_grasa) %>% select(consumo_semanal_comida_grasa)
 ```
 
 ```{r}
-encuesta_salud_train_csv["verduras"] = encuesta_salud_train_csv %>% 
+encuesta_salud_train_df["verduras"] = encuesta_salud_train_df %>% 
   select(consumo_semanal_verdura) %>% 
   map(~ str_replace(.x,"No comí verduras ni hortalizas durante los últimos 7 días",'Nunca')) %>% 
   map(~ str_replace(.x,"1 vez al día",'1/dia')) %>% 
@@ -133,7 +133,7 @@ encuesta_salud_train_csv["verduras"] = encuesta_salud_train_csv %>%
   map(~ str_replace(.x,"1 a 3 veces durante los últimos 7 días",'1-3/sem')) %>% 
   map(~ str_replace(.x,"4 a 6 veces durante los últimos 7 días",'4-6/sem'))
 
-encuesta_salud_train_csv["comida_grasa"] = encuesta_salud_train_csv %>% 
+encuesta_salud_train_df["comida_grasa"] = encuesta_salud_train_df %>% 
   select(consumo_semanal_comida_grasa) %>% 
   map(~ str_replace(.x,"No comí comida alta en grasa en los últimos 7 días",'Nunca')) %>% 
   map(~ str_replace(.x,"1 vez al día",'1/dia')) %>% 
@@ -144,7 +144,7 @@ encuesta_salud_train_csv["comida_grasa"] = encuesta_salud_train_csv %>%
   map(~ str_replace(.x,"1 a 3 veces durante los últimos 7 días",'1-3/sem')) %>% 
   map(~ str_replace(.x,"4 a 6 veces durante los últimos 7 días",'4-6/sem'))
 
-encuesta_salud_train_csv["hambre_mensual"] = encuesta_salud_train_csv %>% 
+encuesta_salud_train_df["hambre_mensual"] = encuesta_salud_train_df %>% 
   select(frecuencia_hambre_mensual) %>% 
   map(~ ifelse(.x == "Nunca", 0, .x)) %>% 
   map(~ ifelse(.x == "Rara vez", 1, .x)) %>% 
@@ -158,10 +158,10 @@ encuesta_salud_train_csv["hambre_mensual"] = encuesta_salud_train_csv %>%
 #### Frecuencias relativas
 
 ```{r}
-mosaicplot(table(encuesta_salud_train_csv$verduras,encuesta_salud_train_csv$hambre_mensual),col=terrain.colors(7:11),main="Distribución hambre mensual - consumo semanal de verduras",ylab="Frecuencia hambre mensual",xlab="Consumo semanal de verduras")
+mosaicplot(table(encuesta_salud_train_df$verduras,encuesta_salud_train_df$hambre_mensual),col=terrain.colors(7:11),main="Distribución hambre mensual - consumo semanal de verduras",ylab="Frecuencia hambre mensual",xlab="Consumo semanal de verduras")
 legend("bottom",cex=0.5,title="Frecuencia hambre mensual",c("-1: Dato perdido","0: Nunca","1: Rara vez","2: Algunas veces ","3: Casi siempre","4: Siempre"),fill=terrain.colors(7:11),horiz=T,xpd=TRUE,inset=c(0, -0.25))
 
-mosaicplot(table(encuesta_salud_train_csv$comida_grasa,encuesta_salud_train_csv$hambre_mensual),col=terrain.colors(7:11),main="Distribución hambre mensual - consumo semanal de comida grasa",ylab="Frecuencia hambre mensual",xlab="Consumo semanal de comida grasa")
+mosaicplot(table(encuesta_salud_train_df$comida_grasa,encuesta_salud_train_df$hambre_mensual),col=terrain.colors(7:11),main="Distribución hambre mensual - consumo semanal de comida grasa",ylab="Frecuencia hambre mensual",xlab="Consumo semanal de comida grasa")
 legend("bottom",cex=0.5,title="Frecuencia hambre mensual",c("-1: Dato perdido","0: Nunca","1: Rara vez","2: Algunas veces ","3: Casi siempre","4: Siempre"),fill=terrain.colors(7:11),horiz=T,xpd=TRUE,inset=c(0, -0.25))
 
 ```
@@ -177,7 +177,9 @@ Observando los gráficos que relacionan la frecuencia de hambre mensual sobre el
 Se plantea que una primera alternativa para modelar el peso es:
 
 \begin{align*}
+
 E(peso) = \beta_0 + \beta_1 altura + \beta_2 edad + \beta_3 genero + \beta_4 diasActividadFisicaSemanal + \beta_5 consumoDiarioAlcohol
+
 \end{align*}
 
 ¿Cuál es la interpretación de cada uno de los coeficientes estimados? ¿Son significativos? ¿El modelo resulta
@@ -214,7 +216,7 @@ options("scipen"=1)
 tidy_modelo_inicial %>%
   select(term, statistic, p.value, conf.low, conf.high)
 ```
-  - Se observa que en el modelo todas las variables resultan estadístivamente significativas para explicar el peso de las personas, ya que el p.value es < 0.05.
+  - Se observa que en el modelo todas las variables altura, edad y género resultan estadístivamente significativas para explicar el peso de las personas, ya que el p.value es < 0.05. Sin embargo, dias_actividad_fisica_semanal y consumo_diario_alcohol no cumplen con la premisa.
   - Además, se observa que el intervalo de confianza del 95% de las variables no contienen al 0.
   - Al tener 2 categorías para género, y ver que resultan estadístivamente significativas para explicar el peso, no es necesario realiza un test de anova para validar la significatividad conjunta entre categorías.
 
@@ -223,12 +225,11 @@ summary(modelo_inicial)
 glance(modelo_inicial)
 ```
 
-Observando el summary, a diferencia de lo que marca el resumen de tidy, vemos que el t value de la variable consumo_diario_alcohol no resulta ser significativo.
-
 En base a los resultados obtenidos, podemos interpretar que el modelo es significativo para explicar el peso de las personas. Observamos que el p-value del Test F es menor a 0.05 (p-value = 2.2e-16).
 
 El $R^{2}$ del modelo es de 0.3539
   
+
 # Modelo categóricas  
   
 Se sugiere probar un modelo que incopore el consumo semanal de snacks y una interacción entre el género y
@@ -250,16 +251,615 @@ En caso de detectar que existen categorías no significativas de la variable con
 si la variable es significativa en su conjunto y, en caso afirmativo, proponer una redefinición de las mismas que permita obtener una mayor proporción de categorías significativas individualmente. Luego, analizar si
 existen cambios en la variabilidad explicada por el modelo.
 
+## Transfomación categoría basal
+```{r}
+# Realizo una transformación simple para definir la categoría basal
+encuesta_salud_train_df %>% distinct(consumo_semanal_snacks) %>% select(consumo_semanal_snacks)
+```
+
+```{r}
+# genero una nueva variable dummy para ubicar la categoría basal
+encuesta_salud_train_df["snacksDummy"] = encuesta_salud_train_df %>% 
+  select(consumo_semanal_snacks) %>% 
+  map(~ str_replace(.x,"No comí comida salada o snacks en los últimos 7 días",'0')) %>% 
+  map(~ str_replace(.x,"1 vez al día",'1/dia')) %>% 
+  map(~ str_replace(.x,"2 veces al día",'2/dia')) %>% 
+  map(~ str_replace(.x,"3 veces al día",'3/dia')) %>% 
+  map(~ str_replace(.x,"4 o más veces al día",'4+/dia')) %>% 
+  map(~ str_replace(.x,"1 a 3 veces durante los últimos 7 días",'1-3/sem')) %>% 
+  map(~ str_replace(.x,"4 a 6 veces durante los últimos 7 días",'4-6/sem'))
+```
+
+```{r}
+modelo_categoricas = lm(formula = peso ~ altura + edad + genero + snacksDummy + (genero * edad), data = encuesta_salud_train_df)
+
+# Resumen del modelo
+tidy_modelo_categoricas <- tidy(modelo_categoricas, conf.int = TRUE)
+tidy_modelo_categoricas
+```
+
+## Interpretación de los coeficientes estimados
+
+\begin{align*}
+
+E(peso) = \beta_0 + \beta_1 altura + \beta_2 edad + \beta_3 genero + \beta_4 consumoSemanalSnack + \beta_5 genero * edad
+
+\end{align*}
+
+  - $\beta_0$ (categoría basal de variable categórica género + consumoSemanalSnack) = -64.19940 Kg, es la media del peso para las personas de altura = 0, edad = 0 y son de género Femenino y no han consumido snacks en los últimos 7 días.
+  - $\beta_1$ indica que para cada incremento en cms del valor de la altura, el peso medio esperado en Kg incrementa en 0.64292, manteniendo el resto de las variables constantes.
+  - $\beta_2$ indica que para cada incremento del valor de la edad en años, el peso medio esperado en Kg varia en 1.22309, manteniendo el resto de las variables constantes.
+  - $\beta_0 + \beta_{generoMasculino}$ es la diferencia de los niveles medios del peso para el genero Masculino respecto a la categoría basal, considerando al resto de las variables sin cambio: (-64.19940 Kg -4.61150 Kg = -68.8109 Kg)
+  - $\beta_0 + \beta_{snacksDummy1-3/sem}$ es la diferencia de los niveles medios del peso para la categoría "1-3/sem" de la variable consumoSemanalSnack respecto a la categoría basal, considerando al resto de las variables sin cambio: (-64.19940 Kg -1.35163 Kg = -65.55103 Kg)
+  - $\beta_0 + \beta_{snacksDummy1/dia}$ es la diferencia de los niveles medios del peso para la categoría "1/dia" de la variable consumoSemanalSnack respecto a la categoría basal, considerando al resto de las variables sin cambio: (-64.19940 Kg -0.60788 Kg = -64.80728 Kg)
+  - $\beta_0 + \beta_{snacksDummy2/dia}$ es la diferencia de los niveles medios del peso para la categoría "2/dia" de la variable consumoSemanalSnack respecto a la categoría basal, considerando al resto de las variables sin cambio: (-64.19940 Kg -1.09466 Kg = -65.29406 Kg)
+  - $\beta_0 + \beta_{snacksDummy3/dia}$ es la diferencia de los niveles medios del peso para la categoría "3/dia" de la variable consumoSemanalSnack respecto a la categoría basal, considerando al resto de las variables sin cambio: (-64.19940 Kg -1.27596 Kg = -65.47536 Kg)
+  - $\beta_0 + \beta_{snacksDummy4-6/sem}$ es la diferencia de los niveles medios del peso para la categoría "4-6/sem" de la variable consumoSemanalSnack respecto a la categoría basal, considerando al resto de las variables sin cambio: (-64.19940 Kg -2.27004 Kg = -66.46944 Kg)
+  - $\beta_0 + \beta_{snacksDummy4+/dia}$ es la diferencia de los niveles medios del peso para la categoría "4+/dia" de la variable consumoSemanalSnack respecto a la categoría basal, considerando al resto de las variables sin cambio: (-64.19940 Kg -2.56697 Kg = -66.76637 Kg)
+  - $\beta_0 + \beta_{snacksDummyDato perdido}$ es la diferencia de los niveles medios del peso para la categoría "Dato perdido" de la variable consumoSemanalSnack respecto a la categoría basal, considerando al resto de las variables sin cambio: (-64.19940 Kg -4.44042 Kg = -68.63982 Kg)
+  - $\beta_{edad:generoMasculino}$ representa la interacción entre la variable género y edad. En este caso está representando la interacción entre edda y el género másculino, debido a que el género femenino fue considerado como basal. Indica que para cada unidad que incrementa el valor de edad, siendo de género masculino, incrementa el peso medio esperado en Kg en 0.39146, manteniendo el resto de las variables constantes.
+
+## Significatividad
+
+```{r}
+options("scipen"=1)
+tidy_modelo_categoricas %>%
+  select(term, statistic, p.value, conf.low, conf.high)
+summary(modelo_categoricas)
+glance(modelo_categoricas)
+tidy(anova(modelo_categoricas))
+```
+  
+  - Se observa que en el modelo no todas las variables resultan estadístivamente significativas para explicar el peso de las personas. La variable consumoSemanalSnack posee categorías que no aportan lo suficiente al modelo, ya que el p.value es < 0.05.
+    - snacksDummy1/dia: 0.18257    
+    - snacksDummy2/dia: 0.10985    
+    - snacksDummy3/dia: 0.20719
+  Sucede algo similar con el generoMasculino: 0.08520, pero es relevante en la totalidad del modelo y su interacción con edad también es relevante.
+
+En base a los resultados obtenidos, podemos interpretar que el modelo es significativo para explicar el peso de las personas. Observamos que el p-value del Test F es menor a 0.05 (p-value = 2.2e-16) y el $R^{2}$ del modelo es de 0.3575, siendo apenas mejor al modelo inicial, analizado en la sección anterior.
+
+Del análisis previo, vemos que 3 categorías no son estadísticamente significativas, pero al revisar los valores del test ANOVA, vemos que la variable en su conjunto sí lo es, por lo que realizaremos una redefinición de las categorías y evaluaremos los resultados obtenidos. 
+  
+## Redefinición de la variable consumoSemanalSnack
+
+Vamos a redefinir la variable consumo_semanal_snacks en 4 categorías:
+
+  - 0: Sin consumo
+  - Diario: las categorías que indican consumo díario
+  - Ocacional: las categorías que indican consumo en los últimos 7 días
+  - Datos perdidos: no presenta cambios a los datos originales
+  
+```{r}
+# genero una nueva variable dummy para ubicar la categoría basal
+encuesta_salud_train_df["snacksRedefined"] = encuesta_salud_train_df %>% 
+  select(consumo_semanal_snacks) %>% 
+  map(~ str_replace(.x,"No comí comida salada o snacks en los últimos 7 días",'0')) %>% 
+  map(~ str_replace(.x,"1 vez al día",'Diario')) %>% 
+  map(~ str_replace(.x,"2 veces al día",'Diario')) %>% 
+  map(~ str_replace(.x,"3 veces al día",'Diario')) %>% 
+  map(~ str_replace(.x,"4 o más veces al día",'Diario')) %>% 
+  map(~ str_replace(.x,"1 a 3 veces durante los últimos 7 días",'Ocacional')) %>% 
+  map(~ str_replace(.x,"4 a 6 veces durante los últimos 7 días",'Ocacional'))
+```
+
+Generamos el modelo y analizamos los resultados:
+
+```{r}
+modelo_categoricas_redefined = lm(formula = peso ~ altura + edad + genero + snacksRedefined + (genero * edad), data = encuesta_salud_train_df)
+
+# Resumen del modelo
+tidy(modelo_categoricas_redefined, conf.int = TRUE)
+summary(modelo_categoricas_redefined)
+tidy(anova(modelo_categoricas_redefined))
+```
+
+Podemos observar que al agrupar las categorías, mejora la significatividad, el modelo continua siendo significativo para explicar el peso de las personas y el $R^{2}$ del modelo es de 0.3571, siendo apenas menor al modelo original.
+
+
+# Modelos propios y evaluación
+
+Realizar 2 modelos lineales múltiples adicionales y explicar brevemente la lógica detrás de los mismos (se
+valorará la creación y/o inclusión de variables nuevas).
+
+Evaluar la performance del modelo inicial, el modelo categóricas con las categorías redefinidas de la variable consumoSemanalSnacks y los modelos desarrollados en este punto en el dataset de entrenamiento y evaluación (usar dataset “encuesta_salud_test.csv”). 
+
+La evaluación de performance consiste en comparar la performance en términos del R cuadrado ajustado, RMSE y MAE sobre el set de entrenamiento y en términos de RMSE y MAE sobre el set de evaluación.
+
+¿Cuál es el mejor modelo para nuestro objetivo de predecir el peso? ¿Por qué?
+
+## Primer modelo
+
+En el primer modelo vamos a incoporar una interacción entre las variables genero y altura, ya que en el análisis exploratorio se observó una clara diferencia en los valores medios de la altura al agruparlos por género, por lo que es un indicador de que existe una correlación y es interesante analizar el impacto en el modelo al incluir esta interacción. Además de este nuevo $\beta$, se mantendras la variable edad.
+
+\begin{align*}
+
+E(peso) = \beta_0 + \beta_1 altura + \beta_2 edad + \beta_3 genero + \beta_4 genero * altura
+
+\end{align*}
+
+```{r}
+my_first_model = lm(formula = peso ~ altura + edad + genero + (genero * altura), data = encuesta_salud_train_df)
+
+tidy(my_first_model)
+```
+
+### Evaluación de performance
+
+Primero evaluamos los $R^2$ ajustado de los 3 modelos y vemos que son muy parecidos, recién en el tercer decimal notamos una diferencia.
+
+```{r}
+cmp_model_list_1 <- list(modelo_inicial = modelo_inicial, modelo_cat_redefinido = modelo_categoricas_redefined, modelo_propio = my_first_model)
+# calculamos las métricas para todos los modelos
+glance_train_1 = map_df(cmp_model_list_1, broom::glance, .id = "model") %>%
+  # ordenamos por R2 ajustado
+  arrange(desc(adj.r.squared))
+glance_train_1
+```
+
+```{r}
+# Aplicamos la función augment a los modelos
+training_predictions_1 = map(.x = cmp_model_list_1, .f = augment) 
+
+# Obtenemos el RMSE para los 4 modelos
+map_df(.x = training_predictions_1, .f = metrics, truth = peso, estimate = .fitted, .id="modelo") %>% arrange(.metric,.estimate)
+```
+
+Se observa que el modelo que obtiene el menor RMSE y MAE es el modelo de categóricas redefinidas y esto coincide con los resultados del $R^2$ ajustado, siendo este modelo el que mayor valor tiene.
+
+Ahora evaluaremos las métricas de los modelos en el dataset de testing:
+
+```{r}
+# genero una nueva variable dummy para ubicar la categoría basal
+encuesta_salud_test_df["snacksRedefined"] = encuesta_salud_test_df %>% 
+  select(consumo_semanal_snacks) %>% 
+  map(~ str_replace(.x,"No comí comida salada o snacks en los últimos 7 días",'0')) %>% 
+  map(~ str_replace(.x,"1 vez al día",'Diario')) %>% 
+  map(~ str_replace(.x,"2 veces al día",'Diario')) %>% 
+  map(~ str_replace(.x,"3 veces al día",'Diario')) %>% 
+  map(~ str_replace(.x,"4 o más veces al día",'Diario')) %>% 
+  map(~ str_replace(.x,"1 a 3 veces durante los últimos 7 días",'Ocacional')) %>% 
+  map(~ str_replace(.x,"4 a 6 veces durante los últimos 7 días",'Ocacional'))
+
+# Aplicamos la función augment a los 4 modelos con el set de testing
+testing_predicciones_1 = map(.x = cmp_model_list_1, .f = augment, newdata = encuesta_salud_test_df) 
+
+# Obtenemos el RMSE para los 4 modelos
+map_dfr(.x = testing_predicciones_1, .f = metrics, truth = peso, estimate = .fitted, .id="modelo") %>% arrange(.metric,.estimate)
+```
+
+El modelo que tiene las mejores métrias en testing continúa siendo el modelo de categóricas redefinidas. Siendo mínima la diferencia con los otros modelos.
+
+Siguiendo estos resultados, el modelo a elegir para las predicciones del peso en datos nuevos es el modelo de categóricas redefinidas, ya que explican un 34.67% de la variabilidad del peso y tienen el menor valor en las métricas de error MAE y RMSE.
 
 
 
+## Seguno modelo
+
+En el segundo modelo vamos a incorporar el consumo al modelo anterior, generando 2 nuevas variables "comidaSana" y "comidaChatarra" que serán una combinación de las variables de consumo existentes en el dataset. Adicionalmente, se incluirán los días de consumo de comida rápida.
+
+  - comidaSana: combinación de consumo_semanal_frutas y consumo_semanal_verdura
+  - comidaChatarra: combinación de consumo_semanal_snacks y consumo_semanal_comida_grasa
+
+\begin{align*}
+
+E(peso) = \beta_0 + \beta_1 altura + \beta_2 edad + \beta_3 genero + \beta_4 genero * altura + \beta_5 comidaSana + \beta_6 comidaChatarra + \beta_7 diasConsumoComidaRapida
+
+\end{align*}
+
+### Generación de las variables nuevas
+
+Partimos de la redefinición realizada en el modelo de categóricas y lo extendemos a las otras variables categóricas de consumo. Luego se realizó una combinación de estas variables en una nuevo, intentando "promediar" las categorías. Las nuevas categorías son:
+
+  - 0: no consumieron ninguno de ambas variables (se mantiene la lógica para utilizarlo de categoría basal)
+  - Diario: consumo diario en ambas variables
+  - Ocacional: consumieron alguna vez en los últimos 7 días en ambas variables
+  - SemiDiario: consumieron diariamente en alguna de las variables
+  - SemiOcacional: consumieron ocacionalmente en alguna de las variables
+  - Dato perdido: no se dispone del dato en alguna de las variables
+  - Otro: en caso de no cubrir alguna de los escenarios anteriores
+  
+#### Dataset de train
+
+```{r}
+# genero una nueva variable dummy para ubicar la categoría basal
+encuesta_salud_train_df["snacksRedefined"] = encuesta_salud_train_df %>% 
+  select(consumo_semanal_snacks) %>% 
+  map(~ str_replace(.x,"No comí comida salada o snacks en los últimos 7 días",'0')) %>% 
+  map(~ str_replace(.x,"1 vez al día",'Diario')) %>% 
+  map(~ str_replace(.x,"2 veces al día",'Diario')) %>% 
+  map(~ str_replace(.x,"3 veces al día",'Diario')) %>% 
+  map(~ str_replace(.x,"4 o más veces al día",'Diario')) %>% 
+  map(~ str_replace(.x,"1 a 3 veces durante los últimos 7 días",'Ocacional')) %>% 
+  map(~ str_replace(.x,"4 a 6 veces durante los últimos 7 días",'Ocacional'))
+
+encuesta_salud_train_df["verdurasRedefined"] = encuesta_salud_train_df %>% 
+  select(consumo_semanal_verdura) %>% 
+  map(~ str_replace(.x,"No comí verduras ni hortalizas durante los últimos 7 días",'0')) %>% 
+  map(~ str_replace(.x,"1 vez al día",'Diario')) %>% 
+  map(~ str_replace(.x,"2 veces al día",'Diario')) %>% 
+  map(~ str_replace(.x,"3 veces al día",'Diario')) %>% 
+  map(~ str_replace(.x,"4 o más veces al día",'Diario')) %>% 
+  map(~ str_replace(.x,"1 a 3 veces durante los últimos 7 días",'Ocacional')) %>% 
+  map(~ str_replace(.x,"4 a 6 veces durante los últimos 7 días",'Ocacional'))
+
+encuesta_salud_train_df["frutasRedefined"] = encuesta_salud_train_df %>% 
+  select(consumo_semanal_frutas) %>% 
+  map(~ str_replace(.x,"No comí frutas durante los últimos 7 días",'0')) %>% 
+  map(~ str_replace(.x,"1 vez al día",'Diario')) %>% 
+  map(~ str_replace(.x,"2 veces al día",'Diario')) %>% 
+  map(~ str_replace(.x,"3 veces al día",'Diario')) %>% 
+  map(~ str_replace(.x,"4 o más veces al día",'Diario')) %>% 
+  map(~ str_replace(.x,"1 a 3 veces durante los últimos 7 días",'Ocacional')) %>% 
+  map(~ str_replace(.x,"4 a 6 veces durante los últimos 7 días",'Ocacional'))
+
+encuesta_salud_train_df["grasasRedefined"] = encuesta_salud_train_df %>% 
+  select(consumo_semanal_comida_grasa) %>% 
+  map(~ str_replace(.x,"No comí comida alta en grasa en los últimos 7 días",'0')) %>% 
+  map(~ str_replace(.x,"1 vez al día",'Diario')) %>% 
+  map(~ str_replace(.x,"2 veces al día",'Diario')) %>% 
+  map(~ str_replace(.x,"3 veces al día",'Diario')) %>% 
+  map(~ str_replace(.x,"4 o más veces al día",'Diario')) %>% 
+  map(~ str_replace(.x,"1 a 3 veces durante los últimos 7 días",'Ocacional')) %>% 
+  map(~ str_replace(.x,"4 a 6 veces durante los últimos 7 días",'Ocacional'))
+
+encuesta_salud_train_df %>% distinct(verdurasRedefined) %>% select(verdurasRedefined)
+encuesta_salud_train_df %>% distinct(frutasRedefined) %>% select(frutasRedefined)
+encuesta_salud_train_df %>% distinct(grasasRedefined) %>% select(grasasRedefined)
+encuesta_salud_train_df %>% distinct(snacksRedefined) %>% select(snacksRedefined)
+```
+
+```{r}
+encuesta_salud_train_df = encuesta_salud_train_df %>%
+  mutate(comidaSana = if_else(frutasRedefined == '0' & verdurasRedefined == '0', '0',
+                  if_else(frutasRedefined == 'Diario' & verdurasRedefined == 'Diario', 'Diario',
+                  if_else(frutasRedefined == 'Ocacional' & verdurasRedefined == 'Ocacional', 'Ocacional',
+                  if_else(frutasRedefined == 'Dato perdido' | verdurasRedefined == 'Dato perdido', 'Dato perdido',
+                  if_else(frutasRedefined == 'Diario' | verdurasRedefined == 'Diario', 'SemiDiario',
+                  if_else(frutasRedefined == 'Ocacional' | verdurasRedefined == 'Ocacional', 'SemiOcacional',
+                          'Otro'
+                         )))))))  %>%
+  mutate(comidaChatarra = if_else(snacksRedefined == '0' & grasasRedefined == '0', '0',
+                  if_else(snacksRedefined == 'Diario' & grasasRedefined == 'Diario', 'Diario',
+                  if_else(snacksRedefined == 'Ocacional' & grasasRedefined == 'Ocacional', 'Ocacional',
+                  if_else(snacksRedefined == 'Dato perdido' | grasasRedefined == 'Dato perdido', 'Dato perdido',
+                  if_else(snacksRedefined == 'Diario' | grasasRedefined == 'Diario', 'SemiDiario',
+                  if_else(snacksRedefined == 'Ocacional' | grasasRedefined == 'Ocacional', 'SemiOcacional',
+                          'Otro'
+                         )))))))
 
 
+encuesta_salud_train_df %>% distinct(comidaSana) %>% select(comidaSana)
+encuesta_salud_train_df %>% distinct(comidaChatarra) %>% select(comidaChatarra)
+```
+
+#### Dataset de test
+
+```{r}
+# genero una nueva variable dummy para ubicar la categoría basal
+encuesta_salud_test_df["snacksRedefined"] = encuesta_salud_test_df %>% 
+  select(consumo_semanal_snacks) %>% 
+  map(~ str_replace(.x,"No comí comida salada o snacks en los últimos 7 días",'0')) %>% 
+  map(~ str_replace(.x,"1 vez al día",'Diario')) %>% 
+  map(~ str_replace(.x,"2 veces al día",'Diario')) %>% 
+  map(~ str_replace(.x,"3 veces al día",'Diario')) %>% 
+  map(~ str_replace(.x,"4 o más veces al día",'Diario')) %>% 
+  map(~ str_replace(.x,"1 a 3 veces durante los últimos 7 días",'Ocacional')) %>% 
+  map(~ str_replace(.x,"4 a 6 veces durante los últimos 7 días",'Ocacional'))
+
+encuesta_salud_test_df["verdurasRedefined"] = encuesta_salud_test_df %>% 
+  select(consumo_semanal_verdura) %>% 
+  map(~ str_replace(.x,"No comí verduras ni hortalizas durante los últimos 7 días",'0')) %>% 
+  map(~ str_replace(.x,"1 vez al día",'Diario')) %>% 
+  map(~ str_replace(.x,"2 veces al día",'Diario')) %>% 
+  map(~ str_replace(.x,"3 veces al día",'Diario')) %>% 
+  map(~ str_replace(.x,"4 o más veces al día",'Diario')) %>% 
+  map(~ str_replace(.x,"1 a 3 veces durante los últimos 7 días",'Ocacional')) %>% 
+  map(~ str_replace(.x,"4 a 6 veces durante los últimos 7 días",'Ocacional'))
+
+encuesta_salud_test_df["frutasRedefined"] = encuesta_salud_test_df %>% 
+  select(consumo_semanal_frutas) %>% 
+  map(~ str_replace(.x,"No comí frutas durante los últimos 7 días",'0')) %>% 
+  map(~ str_replace(.x,"1 vez al día",'Diario')) %>% 
+  map(~ str_replace(.x,"2 veces al día",'Diario')) %>% 
+  map(~ str_replace(.x,"3 veces al día",'Diario')) %>% 
+  map(~ str_replace(.x,"4 o más veces al día",'Diario')) %>% 
+  map(~ str_replace(.x,"1 a 3 veces durante los últimos 7 días",'Ocacional')) %>% 
+  map(~ str_replace(.x,"4 a 6 veces durante los últimos 7 días",'Ocacional'))
+
+encuesta_salud_test_df["grasasRedefined"] = encuesta_salud_test_df %>% 
+  select(consumo_semanal_comida_grasa) %>% 
+  map(~ str_replace(.x,"No comí comida alta en grasa en los últimos 7 días",'0')) %>% 
+  map(~ str_replace(.x,"1 vez al día",'Diario')) %>% 
+  map(~ str_replace(.x,"2 veces al día",'Diario')) %>% 
+  map(~ str_replace(.x,"3 veces al día",'Diario')) %>% 
+  map(~ str_replace(.x,"4 o más veces al día",'Diario')) %>% 
+  map(~ str_replace(.x,"1 a 3 veces durante los últimos 7 días",'Ocacional')) %>% 
+  map(~ str_replace(.x,"4 a 6 veces durante los últimos 7 días",'Ocacional'))
+
+encuesta_salud_test_df %>% distinct(verdurasRedefined) %>% select(verdurasRedefined)
+encuesta_salud_test_df %>% distinct(frutasRedefined) %>% select(frutasRedefined)
+encuesta_salud_test_df %>% distinct(grasasRedefined) %>% select(grasasRedefined)
+encuesta_salud_test_df %>% distinct(snacksRedefined) %>% select(snacksRedefined)
+```
+
+```{r}
+encuesta_salud_test_df = encuesta_salud_test_df %>%
+  mutate(comidaSana = if_else(frutasRedefined == '0' & verdurasRedefined == '0', '0',
+                  if_else(frutasRedefined == 'Diario' & verdurasRedefined == 'Diario', 'Diario',
+                  if_else(frutasRedefined == 'Ocacional' & verdurasRedefined == 'Ocacional', 'Ocacional',
+                  if_else(frutasRedefined == 'Dato perdido' | verdurasRedefined == 'Dato perdido', 'Dato perdido',
+                  if_else(frutasRedefined == 'Diario' | verdurasRedefined == 'Diario', 'SemiDiario',
+                  if_else(frutasRedefined == 'Ocacional' | verdurasRedefined == 'Ocacional', 'SemiOcacional',
+                          'Otro'
+                         )))))))  %>%
+  mutate(comidaChatarra = if_else(snacksRedefined == '0' & grasasRedefined == '0', '0',
+                  if_else(snacksRedefined == 'Diario' & grasasRedefined == 'Diario', 'Diario',
+                  if_else(snacksRedefined == 'Ocacional' & grasasRedefined == 'Ocacional', 'Ocacional',
+                  if_else(snacksRedefined == 'Dato perdido' | grasasRedefined == 'Dato perdido', 'Dato perdido',
+                  if_else(snacksRedefined == 'Diario' | grasasRedefined == 'Diario', 'SemiDiario',
+                  if_else(snacksRedefined == 'Ocacional' | grasasRedefined == 'Ocacional', 'SemiOcacional',
+                          'Otro'
+                         )))))))
+
+
+encuesta_salud_test_df %>% distinct(comidaSana) %>% select(comidaSana)
+encuesta_salud_test_df %>% distinct(comidaChatarra) %>% select(comidaChatarra)
+```
+
+
+### Generación del modelo
+
+\begin{align*}
+
+E(peso) = \beta_0 + \beta_1 altura + \beta_2 edad + \beta_3 genero + \beta_4 genero * altura + \beta_5 comidaSana + \beta_6 comidaChatarra + \beta_7 diasConsumoComidaRapida
+
+\end{align*}
+
+```{r}
+my_model_2 = lm(formula = peso ~ altura + edad + genero + (genero * altura) + comidaSana + comidaChatarra + dias_consumo_comida_rapida, data = encuesta_salud_train_df)
+```
+
+Evaluamos los resultados del modelo:
+
+```{r}
+summary(my_model_2)
+anova(my_model_2)
+```
+
+Vemos que la variable comidaSana parece no ser estadísticamente significativa, en cambio comidaChatarra en su conjunto sí. Por lo que probaremos hacer un ajuste quitando esa variable y generando una interacción entre el consumo de comidaChatarra y los dias de consumo de comida rápida.
+
+\begin{align*}
+
+E(peso) = \beta_0 + \beta_1 altura + \beta_2 edad + \beta_3 genero + \beta_4 genero * altura + \beta_6 comidaChatarra * diasConsumoComidaRapida
+
+\end{align*}
+
+```{r}
+my_model_2_ajustado = lm(formula = peso ~ altura + edad + genero + (genero * altura)  + (comidaChatarra * dias_consumo_comida_rapida), data = encuesta_salud_train_df)
+```
+
+```{r}
+summary(my_model_2_ajustado)
+anova(my_model_2_ajustado)
+```
+
+Ahora observamos que la interacción parece no ser significativa, pero la variable dias_consumo_comida_rapida es levemente significativa, por lo que haremos un segundo ajuste y solamente probar un modelo con la variable comidaChatarra.
+
+\begin{align*}
+
+E(peso) = \beta_0 + \beta_1 altura + \beta_2 edad + \beta_3 genero + \beta_4 genero * altura + \beta_6 comidaChatarra
+
+\end{align*}
+
+
+```{r}
+my_model_2_reducido = lm(formula = peso ~ altura + edad + genero + (genero * altura) + comidaChatarra, data = encuesta_salud_train_df)
+```
+
+```{r}
+summary(my_model_2_reducido)
+anova(my_model_2_reducido)
+```
+
+Ahora vemos que todas las variables en su conjunto son significativas, por lo que procederemos a evaluar la performance tanto en train como test y analiar los resultados.
+
+
+### Evaluación de performance
+
+
+
+```{r}
+cmp_model_list_2<- list(modelo_inicial = modelo_inicial, modelo_cat_redefinido = modelo_categoricas_redefined, modelo_propio = my_model_2, modelo_propio_ajustado = my_model_2_ajustado, modelo_propio_reducido = my_model_2_reducido)
+# Aplicamos la función augment a los modelos
+training_predictions_2 = map(.x = cmp_model_list_2, .f = augment) 
+
+# Obtenemos el RMSE para los 4 modelos
+map_df(.x = training_predictions_2, .f = metrics, truth = peso, estimate = .fitted, .id="modelo") %>% arrange(.metric,.estimate)
+```
+Comparando los modelos, podemos observar que en train el nuevo modelo tiene un mejor rendimiento que los modelos anteriores, ya que tienen un valor mayor en la explicación de la variabilidad del peso y tienen el menor valor en las métricas de error MAE y RMSE.
+
+```{r}
+# Aplicamos la función augment a los 4 modelos con el set de testing
+testing_predicciones_2 = map(.x = cmp_model_list_2, .f = augment, newdata = encuesta_salud_test_df) 
+
+# Obtenemos el RMSE para los 4 modelos
+map_dfr(.x = testing_predicciones_2, .f = metrics, truth = peso, estimate = .fitted, .id="modelo") %>% arrange(.metric,.estimate)
+```
+
+Observando los valores en test, observamos que los resultados de train cambian completamente. El mejor modelo tanto en $R^2$ como en métricas de error RMSE y MAE sigue siendo el modelo de categóricas redefinidio y las 3 variantes del segundo modelo tienen un rendimiento prácticamente igual.
 
 
 # Diagnóstico del modelo
+Analizar en profundidad el cumplimiento de los supuestos del modelo lineal para el modelo inicial.
+
+\begin{align*}
+
+$\varepsilon_i$ ∼ N(0,$\sigma^2$) independientes entre sí.
+
+\end{align*}
+
+Los errores tienen distribución normal con media cero y varianza constante y son independientes entre sí. Los errores son inobservables, por lo tanto, tendremos que trabajar con su correlato empírico: los residuos.
+
+Para realizar el diagnóstico, vamos a analizar los gráficos que nos proporciona el modelo:
+
+  - **Residuos vs valores predichos**: El objetivo es que no veamos una estructura clara. Si así la hubiera, esto implicaría que hay una parte sistemática del fenómeno que se esta perdiendo.
+
+  - **Normal Q-Q plot**: sirve para ver si los datos siguen una distribución teórica, en este caso, la ∼N(0,1). Los residuos estandarizados, si el modelo esta bien definido, deberían seguir esta distribución
+
+  - **Scale-location plot**: Similar al primer gráfico, pero utilizando la raíz cuadrada de los residuos estandarizados. De la misma forma que el anterior, buscamos que no haya una estructura en los residuos.
+
+  - **Residual vs leverage**: El leverage mide cuan influyentes son los puntos en el modelo. Si en este gráfico algunas observaciones aparecen muy separadas, con mucho leverage y residuo, significa que cambian mucho al modelo.
+
 ```{r}
 plot(modelo_inicial)
 ```
 
+### Conclusiones
+
+Analizando los gráficos podemos obtener las siguientes conclusiones:
+
+  - **Residuos vs valores predichos**: No parece existir alguna estructura en los datos que esté afectando en la curva de predicción. Se observan algunos valores atípicos que mueven ligeramente la curva, pero no son significativos.
+  
+  - **Normal Q-Q plot**: el extremo inferior parece ajustarse a la curva normal, en cambio el extremo superio tiene una clara tendencia que la aleja de la curva normal. Vemos que la presencia de los outliers que se detectaron en el gráfico de residuos, son los principales causantes de este desvío, pero no son los únicos culpables.
+  
+  - **Residual vs leverage**: Se detectan algunos residuos que influencia en la curva de Leverage, pero no parecen estár afectando significativamente al Leverage.
+  
+
+**Diagnóstico**: el modelo no cumple con los supuestos del modelo lineal. Parecen existir tres problemas situaciones: 
+
+  1. No se observa heterocedasticidad entre los residuos y los valores predichos.
+  2. Falta de normalidad.
+  3. No se detectan observaciones que sean influyentes.
+
+# Modelo Robusto
+
+Leer el archivo “encuesta_salud_modelo6.csv”. Este último consiste en el dataset original de train con la incorporación de algunas observaciones adicionales que pueden incluir valores atípicos. En particular, observar la relación entre peso y altura ¿Qué ocurre con estos nuevos datos?
+
+Entrenar el modelo inicial con estos nuevos datos y comentar qué se observa en los coeficientes estimados y las métricas de evaluación (R cuadrado ajustado, RMSE y MAE) respecto al modelo entrenado con el set de entrenamiento original.
+
+Entrenar un modelo robusto con la misma especificación que el modelo inicial sobre los nuevos datos. Comparar los coeficientes y su performance (RMSE y MAE) respecto al modelo inicial no robusto entrenado en este punto. ¿Qué puede concluir al respecto?
+
+Nota: los registros que se suman en este punto son observaciones ficticias que se generaron a partir de observaciones reales del set de datos original.
+
+
+```{r}
+# Cargo el nuevo dataset
+encuesta_salud_modelo6_df <- read.csv("datasets/encuesta_salud_modelo6.csv")
+
+# Genero un data frame con las variables numéricas
+numeric_6_df = encuesta_salud_modelo6_df %>% dplyr::select(where(is.numeric))
+numeric_6_df = numeric_df[, ! names(numeric_df) %in% c("record"), drop = F]
+numeric_6_df["genero"] = encuesta_salud_modelo6_df["genero"]
+```
+
+```{r}
+# graficamos con ggpairs coloreando por property type
+g <- ggpairs(numeric_6_df, aes(color = genero), 
+          upper = list(continuous = wrap("cor", size = 2, hjust=0.5)), legend = 25, progress=FALSE) + 
+  theme(axis.text.x = element_text(angle = 90, hjust = 1), legend.position = "bottom") + 
+  theme_bw()
+# hacemos un loop para cambiar los colores del gráfico
+for(i in 1:g$nrow) {
+  for(j in 1:g$ncol){
+    g[i,j] <- g[i,j] + 
+      scale_fill_brewer(palette="Dark2") +  
+      scale_color_brewer(palette="Dark2")
+        }
+}
+g 
+```
+Analizando las variables del nuevo dataset vemos que no se detectan diferencias entre los valores medios de altura, peso y dias_actividad_fisica al compararlos por género, lo cual nos está indicando que los outliers o valores atípicos introducidis en este dataset, están afectando la influencia de la variable género que era una variable muy importante en los modelos generados hasta el momento.
+
+#### Modelo inicial
+
+\begin{align*}
+
+E(peso) = \beta_0 + \beta_1 altura + \beta_2 edad + \beta_3 genero + \beta_4 diasActividadFisicaSemanal + \beta_5 consumoDiarioAlcohol
+
+\end{align*}
+
+```{r}
+# ajustamos el modelo lineal múltiple
+modelo_inicial_no_robusto = lm(formula = peso ~ altura + edad + genero + dias_actividad_fisica_semanal + consumo_diario_alcohol, data = encuesta_salud_modelo6_df)
+
+# Resumen del modelo
+tidy(modelo_inicial_no_robusto, conf.int = TRUE)
+summary(modelo_inicial_no_robusto)
+```
+
+Comparando los resultados con los obtenidos en el modelo inicial, vemos que la única variable que ganó relevancia es **dias_actividad_fisica_semanal** y el resto sin menos significativas.
+
+El valor de $\R^2$ bajó drásticamente de 0.35 a 0.11
+
+El estadístico F sigue siendo significativo.
+
+
+## Comparación de modelos
+
+Obtenemos las métricas de ambos modelos iniciales:
+
+```{r}
+initial_models_list <- list(modelo_inicial = modelo_inicial, modelo_inicial_no_robusto = modelo_inicial_no_robusto)
+
+# Aplicamos la función augment a los modelos iniciales
+initial_models = map(.x = initial_models_list, .f = augment) 
+
+# Obtenemos el RMSE para los 4 modelos
+map_df(.x = initial_models, .f = metrics, truth = peso, estimate = .fitted, .id="modelo") %>% arrange(.metric,.estimate)
+```
+
+Podemos observar que todos los valores empeoran drásticamente al utilizar el nuevo dataset.
+
+  - **MAE**: incrementó de 7.455 a 9.233 (24%)
+  - **RMSE**: incrementó de 9.91 a 15.744 (59%)
+  - **$\R^2$**: disminuyó de 0.354 a 0.11  
+
+## Modelo robusto
+
+```{r}
+# ajustamos el modelo lineal múltiple
+modelo_inicial_robusto = rlm(formula = peso ~ altura + edad + genero + dias_actividad_fisica_semanal + consumo_diario_alcohol, data = encuesta_salud_modelo6_df)
+```
+
+```{r}
+# Resumen del modelo no robusto
+summary(modelo_inicial_no_robusto)
+summary(modelo_inicial_no_robusto)$sigma
+```
+
+```{r}
+# Resumen del modelo robusto
+summary(modelo_inicial_robusto)
+summary(modelo_inicial_robusto)$sigma
+```
+
+Ya podemos observar que el RSE del modelo robusto es mucho menor. Pasó de 15.7515 a 8.684
+
+
+```{r}
+initial_models_list_2 <- list(modelo_inicial_no_robusto = modelo_inicial_no_robusto, modelo_inicial_robusto = modelo_inicial_robusto)
+
+# Aplicamos la función augment a los modelos iniciales
+initial_models_2 = map(.x = initial_models_list_2, .f = augment) 
+
+# Obtenemos el RMSE para los 4 modelos
+map_df(.x = initial_models_2, .f = metrics, truth = peso, estimate = .fitted, .id="modelo") %>% arrange(.metric,.estimate)
+```
+
+Observando el resultado de las predicciones y las métricas de error, vemos que el modelo robusto presenta mejorías, no muy significativas, pero se nota la mejoría entre un modelo y otro, sin embargo, el $\R^2$ es menor.
+
+### Analisis de los gráficos
+
+```{r}
+plot(modelo_inicial_no_robusto)
+```
+
+```{r}
+plot(modelo_inicial_robusto)
+```
+
+  - No se observan diferencias significativas entre los residuos y los valores predichos, en cuanto a la distribución de los puntos. 
+  
+  - Sí se observa una diferencia en la distribución del Leverage. En el modelo robusto se observa una mayor concentración de los residuos sobre la curva del Leverage, lo que nos indica que es menos sensible a las variaciones de los valores atípicos que tenemos en el dataset.
+  
 

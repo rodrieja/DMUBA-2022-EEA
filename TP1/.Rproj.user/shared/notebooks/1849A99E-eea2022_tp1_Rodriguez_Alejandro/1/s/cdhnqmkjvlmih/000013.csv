@@ -1,2 +1,0 @@
-"0",""
-"0","mosaicplot(table(encuesta_salud_train_csv$comida_grasa,encuesta_salud_train_csv$hambre_mensual),col=terrain.colors(7:11),main=""Distribución hambre mensual - consumo semanal de comida grasa"",ylab=""Frecuencia hambre mensual"",xlab=""Consumo semanal de comida grasa"")"

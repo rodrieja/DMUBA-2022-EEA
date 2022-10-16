@@ -1,6 +1,0 @@
-"0","# ajustamos el modelo lineal múltiple"
-"0","modelo_inicial = lm(formula = peso ~ altura + edad + genero + dias_actividad_fisica_semanal + consumo_diario_alcohol, data = encuesta_salud_train_df)"
-"0",""
-"0","# Resumen del modelo"
-"0","tidy_modelo_inicial <- tidy(modelo_inicial, conf.int = TRUE)"
-"0","tidy_modelo_inicial"
