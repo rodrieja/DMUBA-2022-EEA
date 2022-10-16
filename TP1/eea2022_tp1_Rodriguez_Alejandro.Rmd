@@ -789,7 +789,7 @@ summary(modelo_inicial_no_robusto)
 
 Comparando los resultados con los obtenidos en el modelo inicial, vemos que la única variable que ganó relevancia es **dias_actividad_fisica_semanal** y el resto sin menos significativas.
 
-El valor de $\R^2$ bajó drásticamente de 0.35 a 0.11
+El valor de $R^2$ bajó drásticamente de 0.35 a 0.11
 
 El estadístico F sigue siendo significativo.
 
@@ -812,7 +812,7 @@ Podemos observar que todos los valores empeoran drásticamente al utilizar el nu
 
   - **MAE**: incrementó de 7.455 a 9.233 (24%)
   - **RMSE**: incrementó de 9.91 a 15.744 (59%)
-  - **$\R^2$**: disminuyó de 0.354 a 0.11  
+  - **$R^2$**: disminuyó de 0.354 a 0.11  
 
 ## Modelo robusto
 
@@ -846,7 +846,7 @@ initial_models_2 = map(.x = initial_models_list_2, .f = augment)
 map_df(.x = initial_models_2, .f = metrics, truth = peso, estimate = .fitted, .id="modelo") %>% arrange(.metric,.estimate)
 ```
 
-Observando el resultado de las predicciones y las métricas de error, vemos que el modelo robusto presenta mejorías, no muy significativas, pero se nota la mejoría entre un modelo y otro, sin embargo, el $\R^2$ es menor.
+Observando el resultado de las predicciones y las métricas de error, vemos que el modelo robusto presenta mejorías, no muy significativas, pero se nota la mejoría entre un modelo y otro, sin embargo, el $R^2$ es menor.
 
 ### Analisis de los gráficos
 
