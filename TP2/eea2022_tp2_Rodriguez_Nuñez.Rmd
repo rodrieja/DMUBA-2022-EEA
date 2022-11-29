@@ -1,0 +1,33 @@
+---
+title: "EEA - TP 2"
+author: "Nuñez, Nicolas - Rodriguez, Alejandro"
+output:
+  html_notebook:
+    theme: spacelab
+    toc: yes
+    toc_float: yes
+    df_print: paged
+  html_document:
+    toc: yes
+    df_print: paged
+---
+```{r theme general}
+theme <- theme(text = element_text(size=10),
+               plot.title = element_text(size = 12, face = "bold.italic", hjust = 0.5), 
+               axis.title.x = element_text(size = 10, face="bold", colour='black'),         
+               axis.title.y = element_text(size = 10, face="bold"),
+               panel.border = element_blank(),
+               panel.grid.major = element_blank(),
+               panel.grid.minor = element_blank(), 
+               legend.title = element_text(face="bold"))
+```
+
+```{r, warning=F, message=FALSE}
+library(tidyverse)
+library(tidymodels)
+library(rsample)
+library(ggplot2)
+library(GGally)
+library(corrr)
+library(MASS)
+```
