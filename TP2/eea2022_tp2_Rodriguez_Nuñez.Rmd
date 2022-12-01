@@ -41,7 +41,7 @@ dataset_2021 = fread('./dataset/flujo-vehicular-por-radares-2021.csv', sep=',')
 dataset_2022 = fread('./dataset/flujo-vehicular-por-radares-2022.csv', sep=';')
 
 # Ajusto el nombre de las columnas
-colnames(dataset_2021) <- c("fecha","hora","autopista_nombre","disp_nombre","disp_ubicacion","seccion_sentido","lat","long","cantidad","extra")
+colnames(dataset_2021) <- c("fecha","hora","autopista_nombre","disp_nombre","disp_ubicacion","seccion_sentido","lat","long","cantidad","hora_diciembre")
 colnames(dataset_2022) <- c("fecha","hora","autopista_nombre","disp_nombre","disp_ubicacion","seccion_sentido","lat","long","cantidad")
 ```
 
@@ -49,14 +49,68 @@ colnames(dataset_2022) <- c("fecha","hora","autopista_nombre","disp_nombre","dis
 # Genero una variable de tipo datetime
 dataset_2019[ , fecha_hora := as.POSIXct(paste(fecha, hora), format="%Y-%m-%d %H") ]
 dataset_2020[ , fecha_hora := as.POSIXct(paste(fecha, hora), format="%Y-%m-%d %H") ]
+# A partir de Octubre cambió el formato de fecha y està separado por '/' en lugar de '-'
+dataset_2020[ is.na(fecha_hora) , fecha_hora := as.POSIXct(paste(fecha, hora), format="%Y/%m/%d %H")]
+# En 2021 el formato de fecha cambió a dd/mm/yy
 dataset_2021[ , fecha_hora := as.POSIXct(paste(fecha, hora), format="%Y-%m-%d %H") ]
-dataset_2022[ , fecha_hora := as.POSIXct(paste(fecha, hora), format="%Y-%m-%d %H") ]
+# En diciembre 2021 se empezó a utilizar otro campo, el cual denominamos hora_diciembre
+dataset_2021[ is.na(fecha_hora) , fecha_hora := as.POSIXct(paste(fecha, hora_diciembre), format="%Y/%m/%d %H")]
+dataset_2022[ , fecha_hora := as.POSIXct(paste(fecha, hora), format="%d/%m/%Y %H") ]
+```
+
+
+```{r}
+datos_faltantes_2019 =  dataset_2019 %>%
+                        gather(., 
+                              key = "variables", 
+                              value = "valores") %>% # agrupamos por las variables del set
+                        group_by(variables) %>% 
+                        summarise(valores_unicos = n_distinct(valores),
+                        porcentaje_faltantes = sum(is.na(valores))/nrow(dataset_2019)*100) %>% 
+                        arrange(desc(porcentaje_faltantes), valores_unicos) # ordenamos por porcentaje de faltantes y valores unicos
+datos_faltantes_2019
 ```
 
 ```{r}
-# Genero una variable de tipo datetime
-dataset_2019[ , fecha_hora := as.POSIXct(paste(fecha, hora), format="%Y-%m-%d %H") ]
-dataset_2020[ , fecha_hora := as.POSIXct(paste(fecha, hora), format="%Y-%m-%d %H") ]
-dataset_2021[ , fecha_hora := as.POSIXct(paste(fecha, hora), format="%Y-%m-%d %H") ]
-dataset_2022[ , fecha_hora := as.POSIXct(paste(fecha, hora), format="%Y-%m-%d %H") ]
+datos_faltantes_2020 =  dataset_2020 %>%
+                        gather(., 
+                              key = "variables", 
+                              value = "valores") %>% # agrupamos por las variables del set
+                        group_by(variables) %>% 
+                        summarise(valores_unicos = n_distinct(valores),
+                        porcentaje_faltantes = sum(is.na(valores))/nrow(dataset_2020)*100) %>% 
+                        arrange(desc(porcentaje_faltantes), valores_unicos) # ordenamos por porcentaje de faltantes y valores unicos
+datos_faltantes_2020
+```
+
+```{r}
+datos_faltantes_2021 =  dataset_2021 %>%
+                        gather(., 
+                              key = "variables", 
+                              value = "valores") %>% # agrupamos por las variables del set
+                        group_by(variables) %>% 
+                        summarise(valores_unicos = n_distinct(valores),
+                        porcentaje_faltantes = sum(is.na(valores))/nrow(dataset_2021)*100) %>% 
+                        arrange(desc(porcentaje_faltantes), valores_unicos) # ordenamos por porcentaje de faltantes y valores unicos
+datos_faltantes_2021
+```
+
+```{r}
+datos_faltantes_2022 =  dataset_2022 %>%
+                        gather(., 
+                              key = "variables", 
+                              value = "valores") %>% # agrupamos por las variables del set
+                        group_by(variables) %>% 
+                        summarise(valores_unicos = n_distinct(valores),
+                        porcentaje_faltantes = sum(is.na(valores))/nrow(dataset_2022)*100) %>% 
+                        arrange(desc(porcentaje_faltantes), valores_unicos) # ordenamos por porcentaje de faltantes y valores unicos
+datos_faltantes_2022
+```
+
+
+```{r}
+# Espacio de pruebas
+
+
+
 ```
