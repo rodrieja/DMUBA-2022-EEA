@@ -1,0 +1,116 @@
+---
+title: "EEA - TP 2 - Prophet"
+author: "Nuñez, Nicolas - Rodriguez, Alejandro"
+output:
+  html_notebook:
+    theme: spacelab
+    toc: yes
+    toc_float: yes
+    df_print: paged
+  html_document:
+    toc: yes
+    df_print: paged
+---
+```{r, warning=F, message=FALSE}
+library(tidyverse)
+library(tidymodels)
+library(rsample)
+library(ggplot2)
+library(GGally)
+library(corrr)
+library(MASS)
+library(data.table)
+library(prophet)
+```
+
+```{r theme general}
+theme <- theme(text = element_text(size=10),
+               plot.title = element_text(size = 12, face = "bold.italic", hjust = 0.5), 
+               axis.title.x = element_text(size = 10, face="bold", colour='black'),         
+               axis.title.y = element_text(size = 10, face="bold"),
+               panel.border = element_blank(),
+               panel.grid.major = element_blank(),
+               panel.grid.minor = element_blank(), 
+               legend.title = element_text(face="bold"))
+```
+
+
+
+```{r}
+# Cargo los datasets
+dataset_2019 = fread('./dataset/flujo-vehicular-por-radares-2019.csv', sep=',')
+dataset_2020 = fread('./dataset/flujo-vehicular-por-radares-2020.csv', sep=',')
+dataset_2021 = fread('./dataset/flujo-vehicular-por-radares-2021.csv', sep=',')
+dataset_2022 = fread('./dataset/flujo-vehicular-por-radares-2022.csv', sep=';')
+
+# Ajusto el nombre de las columnas
+colnames(dataset_2021) <- c("fecha","hora","autopista_nombre","disp_nombre","disp_ubicacion","seccion_sentido","lat","long","cantidad","hora_diciembre")
+colnames(dataset_2022) <- c("fecha","hora","autopista_nombre","disp_nombre","disp_ubicacion","seccion_sentido","lat","long","cantidad")
+```
+
+
+```{r}
+# Genero una variable de tipo datetime
+dataset_2019[ , fecha := format(as.POSIXct(fecha, format="%Y-%m-%d"), "%y-%m-%d") ]
+dataset_2019[ , fecha_hora := as.POSIXct(paste(fecha, hora), format="%y-%m-%d %H") ]
+
+dataset_2020[ , fecha2 := format(as.POSIXct(fecha, format="%Y-%m-%d"), "%y-%m-%d") ]
+dataset_2020[ is.na(fecha2), fecha2 := format(as.POSIXct(fecha, format="%Y/%m/%d"), "%y-%m-%d") ]
+dataset_2020[,fecha := fecha2]
+dataset_2020[ , fecha_hora := as.POSIXct(paste(fecha, hora), format="%y-%m-%d %H") ]
+
+# En 2021 el formato de fecha cambió a dd/mm/yy
+dataset_2021[ , fecha := format(as.POSIXct(fecha, format="%d/%m/%Y"), "%y-%m-%d") ]
+dataset_2021[ is.na(hora_diciembre), fecha_hora := as.POSIXct(paste(fecha, hora), format="%y-%m-%d %H") ]
+# En diciembre 2021 se empezó a utilizar otro campo, el cual denominamos hora_diciembre
+dataset_2021[ is.na(fecha_hora) , fecha_hora := as.POSIXct(paste(fecha, hora_diciembre), format="%y-%m-%d %H")]
+
+dataset_2022[ , fecha_hora := as.POSIXct(paste(fecha, hora), format="%d/%m/%Y %H") ]
+```
+
+```{r}
+dt_train <- rbindlist(list(dataset_2019[,.(total = sum(cantidad)), by = fecha_hora],dataset_2020[,.(total = sum(cantidad)), by = fecha_hora],dataset_2021[,.(total = sum(cantidad)), by = fecha_hora]))
+
+dt_train <- dt_train[order(fecha_hora)]
+```
+
+##############################################################################################
+##############################################################################################
+##############################################################################################
+##############################################################################################
+##############################################################################################
+##############################################################################################
+##############################################################################################
+
+```{r}
+dataset_2022
+```
+
+```{r}
+dt_train[,head(.SD,30)]
+dt_train[,tail(.SD,30)]
+```
+
+```{r}
+colnames(dt_train) <- c("ds","y")
+m <- prophet(dt_train, changepoint.prior.scale=0.01)
+
+```
+
+
+```{r}
+future <- make_future_dataframe(m, periods = 1400, freq = 60 * 60)
+
+fcst <- predict(m, future)
+
+plot(m, fcst)
+
+```
+
+```{r}
+prophet_plot_components(m, fcst)
+
+```
+```{r}
+tail(future,59)
+```
