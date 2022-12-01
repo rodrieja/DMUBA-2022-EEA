@@ -2929,18 +2929,55 @@ border-radius: 0px;
 <!-- rnb-text-begin -->
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubGlicmFyeSh0aWR5dmVyc2UpXG5saWJyYXJ5KHRpZHltb2RlbHMpXG5saWJyYXJ5KHJzYW1wbGUpXG5saWJyYXJ5KGdncGxvdDIpXG5saWJyYXJ5KEdHYWxseSlcbmxpYnJhcnkoY29ycnIpXG5saWJyYXJ5KE1BU1MpXG5gYGAifQ== -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubGlicmFyeSh0aWR5dmVyc2UpXG5saWJyYXJ5KHRpZHltb2RlbHMpXG5saWJyYXJ5KHJzYW1wbGUpXG5saWJyYXJ5KGdncGxvdDIpXG5saWJyYXJ5KEdHYWxseSlcbmxpYnJhcnkoY29ycnIpXG5saWJyYXJ5KE1BU1MpXG5saWJyYXJ5KGRhdGEudGFibGUpXG5cbmBgYCJ9 -->
 <pre class="r"><code>library(tidyverse)
 library(tidymodels)
 library(rsample)
 library(ggplot2)
 library(GGally)
 library(corrr)
-library(MASS)</code></pre>
+library(MASS)
+library(data.table)
+</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuZGF0YXNldF8yMDE5ID0gZnJlYWQoJy4vZGF0YXNldC9mbHVqby12ZWhpY3VsYXItcG9yLXJhZGFyZXMtMjAxOS5jc3YnLCBzZXA9JywnKVxuZGF0YXNldF8yMDIwID0gZnJlYWQoJy4vZGF0YXNldC9mbHVqby12ZWhpY3VsYXItcG9yLXJhZGFyZXMtMjAyMC5jc3YnLCBzZXA9JywnKVxuZGF0YXNldF8yMDIxID0gZnJlYWQoJy4vZGF0YXNldC9mbHVqby12ZWhpY3VsYXItcG9yLXJhZGFyZXMtMjAyMS5jc3YnLCBzZXA9JywnKVxuZGF0YXNldF8yMDIyID0gZnJlYWQoJy4vZGF0YXNldC9mbHVqby12ZWhpY3VsYXItcG9yLXJhZGFyZXMtMjAyMi5jc3YnLCBzZXA9JywnKVxuYGBgIn0= -->
+<pre class="r"><code>dataset_2019 = fread(&#39;./dataset/flujo-vehicular-por-radares-2019.csv&#39;, sep=&#39;,&#39;)
+dataset_2020 = fread(&#39;./dataset/flujo-vehicular-por-radares-2020.csv&#39;, sep=&#39;,&#39;)
+dataset_2021 = fread(&#39;./dataset/flujo-vehicular-por-radares-2021.csv&#39;, sep=&#39;,&#39;)
+dataset_2022 = fread(&#39;./dataset/flujo-vehicular-por-radares-2022.csv&#39;, sep=&#39;,&#39;)</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoiV2FybmluZzogRGV0ZWN0ZWQgMyBjb2x1bW4gbmFtZXMgYnV0IHRoZSBkYXRhIGhhcyA0IGNvbHVtbnMgKGkuZS4gaW52YWxpZCBmaWxlKS4gQWRkZWQgMSBleHRyYSBkZWZhdWx0IGNvbHVtbiBuYW1lIGZvciB0aGUgZmlyc3QgY29sdW1uIHdoaWNoIGlzIGd1ZXNzZWQgdG8gYmUgcm93IG5hbWVzIG9yIGFuIGluZGV4LiBVc2Ugc2V0bmFtZXMoKSBhZnRlcndhcmRzIGlmIHRoaXMgZ3Vlc3MgaXMgbm90IGNvcnJlY3QsIG9yIGZpeCB0aGUgZmlsZSB3cml0ZSBjb21tYW5kIHRoYXQgY3JlYXRlZCB0aGUgZmlsZSB0byBjcmVhdGUgYSB2YWxpZCBmaWxlLldhcm5pbmc6IFN0b3BwZWQgZWFybHkgb24gbGluZSAxNTMwOC4gRXhwZWN0ZWQgNCBmaWVsZHMgYnV0IGZvdW5kIDMuIENvbnNpZGVyIGZpbGw9VFJVRSBhbmQgY29tbWVudC5jaGFyPS4gRmlyc3QgZGlzY2FyZGVkIG5vbi1lbXB0eSBsaW5lOiA8PDAxLzAxLzIyOzA7QVUgRGVsbGVwaWFuZTtSRDEwMSBkZSBsYSBUb3JyZTsxO0E7LTM0LDY3OTE3Oy01OCw0Nzk1OTs2NzE+PlxuIn0= -->
+<pre><code>Warning: Detected 3 column names but the data has 4 columns (i.e. invalid file). Added 1 extra default column name for the first column which is guessed to be row names or an index. Use setnames() afterwards if this guess is not correct, or fix the file write command that created the file to create a valid file.Warning: Stopped early on line 15308. Expected 4 fields but found 3. Consider fill=TRUE and comment.char=. First discarded non-empty line: &lt;&lt;01/01/22;0;AU Dellepiane;RD101 de la Torre;1;A;-34,67917;-58,47959;671&gt;&gt;</code></pre>
+<!-- rnb-output-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuIyBHZW5lcm8gdW5hIHZhcmlhYmxlIGRlIHRpcG8gZGF0ZXRpbWVcbmRhdGFzZXRfMjAxOVsgLCBmZWNoYV9ob3JhIDo9IGFzLlBPU0lYY3QocGFzdGUoZmVjaGEsIGhvcmEpLCBmb3JtYXQ9XCIlWS0lbS0lZCAlSFwiKSBdXG5kYXRhc2V0XzIwMjBbICwgZmVjaGFfaG9yYSA6PSBhcy5QT1NJWGN0KHBhc3RlKGZlY2hhLCBob3JhKSwgZm9ybWF0PVwiJVktJW0tJWQgJUhcIikgXVxuZGF0YXNldF8yMDIxWyAsIGZlY2hhX2hvcmEgOj0gYXMuUE9TSVhjdChwYXN0ZShmZWNoYSwgaG9yYSksIGZvcm1hdD1cIiVZLSVtLSVkICVIXCIpIF1cbmRhdGFzZXRfMjAyMlsgLCBmZWNoYV9ob3JhIDo9IGFzLlBPU0lYY3QocGFzdGUoZmVjaGEsIGhvcmEpLCBmb3JtYXQ9XCIlWS0lbS0lZCAlSFwiKSBdXG5gYGAifQ== -->
+<pre class="r"><code># Genero una variable de tipo datetime
+dataset_2019[ , fecha_hora := as.POSIXct(paste(fecha, hora), format=&quot;%Y-%m-%d %H&quot;) ]
+dataset_2020[ , fecha_hora := as.POSIXct(paste(fecha, hora), format=&quot;%Y-%m-%d %H&quot;) ]
+dataset_2021[ , fecha_hora := as.POSIXct(paste(fecha, hora), format=&quot;%Y-%m-%d %H&quot;) ]
+dataset_2022[ , fecha_hora := as.POSIXct(paste(fecha, hora), format=&quot;%Y-%m-%d %H&quot;) ]</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuIyBHZW5lcm8gdW5hIHZhcmlhYmxlIGRlIHRpcG8gZGF0ZXRpbWVcbmRhdGFzZXRfMjAxOVsgLCBmZWNoYV9ob3JhIDo9IGFzLlBPU0lYY3QocGFzdGUoZmVjaGEsIGhvcmEpLCBmb3JtYXQ9XCIlWS0lbS0lZCAlSFwiKSBdXG5kYXRhc2V0XzIwMjBbICwgZmVjaGFfaG9yYSA6PSBhcy5QT1NJWGN0KHBhc3RlKGZlY2hhLCBob3JhKSwgZm9ybWF0PVwiJVktJW0tJWQgJUhcIikgXVxuZGF0YXNldF8yMDIxWyAsIGZlY2hhX2hvcmEgOj0gYXMuUE9TSVhjdChwYXN0ZShmZWNoYSwgaG9yYSksIGZvcm1hdD1cIiVZLSVtLSVkICVIXCIpIF1cbmRhdGFzZXRfMjAyMlsgLCBmZWNoYV9ob3JhIDo9IGFzLlBPU0lYY3QocGFzdGUoZmVjaGEsIGhvcmEpLCBmb3JtYXQ9XCIlWS0lbS0lZCAlSFwiKSBdXG5gYGAifQ== -->
+<pre class="r"><code># Genero una variable de tipo datetime
+dataset_2019[ , fecha_hora := as.POSIXct(paste(fecha, hora), format=&quot;%Y-%m-%d %H&quot;) ]
+dataset_2020[ , fecha_hora := as.POSIXct(paste(fecha, hora), format=&quot;%Y-%m-%d %H&quot;) ]
+dataset_2021[ , fecha_hora := as.POSIXct(paste(fecha, hora), format=&quot;%Y-%m-%d %H&quot;) ]
+dataset_2022[ , fecha_hora := as.POSIXct(paste(fecha, hora), format=&quot;%Y-%m-%d %H&quot;) ]</code></pre>
 <!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 
-<div id="rmd-source-code">LS0tCnRpdGxlOiAiRUVBIC0gVFAgMiIKYXV0aG9yOiAiTnXDsWV6LCBOaWNvbGFzIC0gUm9kcmlndWV6LCBBbGVqYW5kcm8iCm91dHB1dDoKICBodG1sX25vdGVib29rOgogICAgdGhlbWU6IHNwYWNlbGFiCiAgICB0b2M6IHllcwogICAgdG9jX2Zsb2F0OiB5ZXMKICAgIGRmX3ByaW50OiBwYWdlZAogIGh0bWxfZG9jdW1lbnQ6CiAgICB0b2M6IHllcwogICAgZGZfcHJpbnQ6IHBhZ2VkCi0tLQpgYGB7ciB0aGVtZSBnZW5lcmFsfQp0aGVtZSA8LSB0aGVtZSh0ZXh0ID0gZWxlbWVudF90ZXh0KHNpemU9MTApLAogICAgICAgICAgICAgICBwbG90LnRpdGxlID0gZWxlbWVudF90ZXh0KHNpemUgPSAxMiwgZmFjZSA9ICJib2xkLml0YWxpYyIsIGhqdXN0ID0gMC41KSwgCiAgICAgICAgICAgICAgIGF4aXMudGl0bGUueCA9IGVsZW1lbnRfdGV4dChzaXplID0gMTAsIGZhY2U9ImJvbGQiLCBjb2xvdXI9J2JsYWNrJyksICAgICAgICAgCiAgICAgICAgICAgICAgIGF4aXMudGl0bGUueSA9IGVsZW1lbnRfdGV4dChzaXplID0gMTAsIGZhY2U9ImJvbGQiKSwKICAgICAgICAgICAgICAgcGFuZWwuYm9yZGVyID0gZWxlbWVudF9ibGFuaygpLAogICAgICAgICAgICAgICBwYW5lbC5ncmlkLm1ham9yID0gZWxlbWVudF9ibGFuaygpLAogICAgICAgICAgICAgICBwYW5lbC5ncmlkLm1pbm9yID0gZWxlbWVudF9ibGFuaygpLCAKICAgICAgICAgICAgICAgbGVnZW5kLnRpdGxlID0gZWxlbWVudF90ZXh0KGZhY2U9ImJvbGQiKSkKYGBgCgpgYGB7ciwgd2FybmluZz1GLCBtZXNzYWdlPUZBTFNFfQpsaWJyYXJ5KHRpZHl2ZXJzZSkKbGlicmFyeSh0aWR5bW9kZWxzKQpsaWJyYXJ5KHJzYW1wbGUpCmxpYnJhcnkoZ2dwbG90MikKbGlicmFyeShHR2FsbHkpCmxpYnJhcnkoY29ycnIpCmxpYnJhcnkoTUFTUykKYGBgCg==</div>
+<div id="rmd-source-code">LS0tCnRpdGxlOiAiRUVBIC0gVFAgMiIKYXV0aG9yOiAiTnXDsWV6LCBOaWNvbGFzIC0gUm9kcmlndWV6LCBBbGVqYW5kcm8iCm91dHB1dDoKICBodG1sX25vdGVib29rOgogICAgdGhlbWU6IHNwYWNlbGFiCiAgICB0b2M6IHllcwogICAgdG9jX2Zsb2F0OiB5ZXMKICAgIGRmX3ByaW50OiBwYWdlZAogIGh0bWxfZG9jdW1lbnQ6CiAgICB0b2M6IHllcwogICAgZGZfcHJpbnQ6IHBhZ2VkCi0tLQpgYGB7ciB0aGVtZSBnZW5lcmFsfQp0aGVtZSA8LSB0aGVtZSh0ZXh0ID0gZWxlbWVudF90ZXh0KHNpemU9MTApLAogICAgICAgICAgICAgICBwbG90LnRpdGxlID0gZWxlbWVudF90ZXh0KHNpemUgPSAxMiwgZmFjZSA9ICJib2xkLml0YWxpYyIsIGhqdXN0ID0gMC41KSwgCiAgICAgICAgICAgICAgIGF4aXMudGl0bGUueCA9IGVsZW1lbnRfdGV4dChzaXplID0gMTAsIGZhY2U9ImJvbGQiLCBjb2xvdXI9J2JsYWNrJyksICAgICAgICAgCiAgICAgICAgICAgICAgIGF4aXMudGl0bGUueSA9IGVsZW1lbnRfdGV4dChzaXplID0gMTAsIGZhY2U9ImJvbGQiKSwKICAgICAgICAgICAgICAgcGFuZWwuYm9yZGVyID0gZWxlbWVudF9ibGFuaygpLAogICAgICAgICAgICAgICBwYW5lbC5ncmlkLm1ham9yID0gZWxlbWVudF9ibGFuaygpLAogICAgICAgICAgICAgICBwYW5lbC5ncmlkLm1pbm9yID0gZWxlbWVudF9ibGFuaygpLCAKICAgICAgICAgICAgICAgbGVnZW5kLnRpdGxlID0gZWxlbWVudF90ZXh0KGZhY2U9ImJvbGQiKSkKYGBgCgpgYGB7ciwgd2FybmluZz1GLCBtZXNzYWdlPUZBTFNFfQpsaWJyYXJ5KHRpZHl2ZXJzZSkKbGlicmFyeSh0aWR5bW9kZWxzKQpsaWJyYXJ5KHJzYW1wbGUpCmxpYnJhcnkoZ2dwbG90MikKbGlicmFyeShHR2FsbHkpCmxpYnJhcnkoY29ycnIpCmxpYnJhcnkoTUFTUykKbGlicmFyeShkYXRhLnRhYmxlKQpgYGAKCmBgYHtyfQojIENhcmdvIGxvcyBkYXRhc2V0cwpkYXRhc2V0XzIwMTkgPSBmcmVhZCgnLi9kYXRhc2V0L2ZsdWpvLXZlaGljdWxhci1wb3ItcmFkYXJlcy0yMDE5LmNzdicsIHNlcD0nLCcpCmRhdGFzZXRfMjAyMCA9IGZyZWFkKCcuL2RhdGFzZXQvZmx1am8tdmVoaWN1bGFyLXBvci1yYWRhcmVzLTIwMjAuY3N2Jywgc2VwPScsJykKZGF0YXNldF8yMDIxID0gZnJlYWQoJy4vZGF0YXNldC9mbHVqby12ZWhpY3VsYXItcG9yLXJhZGFyZXMtMjAyMS5jc3YnLCBzZXA9JywnKQpkYXRhc2V0XzIwMjIgPSBmcmVhZCgnLi9kYXRhc2V0L2ZsdWpvLXZlaGljdWxhci1wb3ItcmFkYXJlcy0yMDIyLmNzdicsIHNlcD0nOycpCgojIEFqdXN0byBlbCBub21icmUgZGUgbGFzIGNvbHVtbmFzCmNvbG5hbWVzKGRhdGFzZXRfMjAyMSkgPC0gYygiZmVjaGEiLCJob3JhIiwiYXV0b3Bpc3RhX25vbWJyZSIsImRpc3Bfbm9tYnJlIiwiZGlzcF91YmljYWNpb24iLCJzZWNjaW9uX3NlbnRpZG8iLCJsYXQiLCJsb25nIiwiY2FudGlkYWQiLCJleHRyYSIpCmNvbG5hbWVzKGRhdGFzZXRfMjAyMikgPC0gYygiZmVjaGEiLCJob3JhIiwiYXV0b3Bpc3RhX25vbWJyZSIsImRpc3Bfbm9tYnJlIiwiZGlzcF91YmljYWNpb24iLCJzZWNjaW9uX3NlbnRpZG8iLCJsYXQiLCJsb25nIiwiY2FudGlkYWQiKQpgYGAKCmBgYHtyfQojIEdlbmVybyB1bmEgdmFyaWFibGUgZGUgdGlwbyBkYXRldGltZQpkYXRhc2V0XzIwMTlbICwgZmVjaGFfaG9yYSA6PSBhcy5QT1NJWGN0KHBhc3RlKGZlY2hhLCBob3JhKSwgZm9ybWF0PSIlWS0lbS0lZCAlSCIpIF0KZGF0YXNldF8yMDIwWyAsIGZlY2hhX2hvcmEgOj0gYXMuUE9TSVhjdChwYXN0ZShmZWNoYSwgaG9yYSksIGZvcm1hdD0iJVktJW0tJWQgJUgiKSBdCmRhdGFzZXRfMjAyMVsgLCBmZWNoYV9ob3JhIDo9IGFzLlBPU0lYY3QocGFzdGUoZmVjaGEsIGhvcmEpLCBmb3JtYXQ9IiVZLSVtLSVkICVIIikgXQpkYXRhc2V0XzIwMjJbICwgZmVjaGFfaG9yYSA6PSBhcy5QT1NJWGN0KHBhc3RlKGZlY2hhLCBob3JhKSwgZm9ybWF0PSIlWS0lbS0lZCAlSCIpIF0KYGBgCgpgYGB7cn0KIyBHZW5lcm8gdW5hIHZhcmlhYmxlIGRlIHRpcG8gZGF0ZXRpbWUKZGF0YXNldF8yMDE5WyAsIGZlY2hhX2hvcmEgOj0gYXMuUE9TSVhjdChwYXN0ZShmZWNoYSwgaG9yYSksIGZvcm1hdD0iJVktJW0tJWQgJUgiKSBdCmRhdGFzZXRfMjAyMFsgLCBmZWNoYV9ob3JhIDo9IGFzLlBPU0lYY3QocGFzdGUoZmVjaGEsIGhvcmEpLCBmb3JtYXQ9IiVZLSVtLSVkICVIIikgXQpkYXRhc2V0XzIwMjFbICwgZmVjaGFfaG9yYSA6PSBhcy5QT1NJWGN0KHBhc3RlKGZlY2hhLCBob3JhKSwgZm9ybWF0PSIlWS0lbS0lZCAlSCIpIF0KZGF0YXNldF8yMDIyWyAsIGZlY2hhX2hvcmEgOj0gYXMuUE9TSVhjdChwYXN0ZShmZWNoYSwgaG9yYSksIGZvcm1hdD0iJVktJW0tJWQgJUgiKSBdCmBgYAo=</div>
 
 
 </div>

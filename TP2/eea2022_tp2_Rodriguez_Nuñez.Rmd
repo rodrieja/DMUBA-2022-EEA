@@ -30,4 +30,33 @@ library(ggplot2)
 library(GGally)
 library(corrr)
 library(MASS)
+library(data.table)
+```
+
+```{r}
+# Cargo los datasets
+dataset_2019 = fread('./dataset/flujo-vehicular-por-radares-2019.csv', sep=',')
+dataset_2020 = fread('./dataset/flujo-vehicular-por-radares-2020.csv', sep=',')
+dataset_2021 = fread('./dataset/flujo-vehicular-por-radares-2021.csv', sep=',')
+dataset_2022 = fread('./dataset/flujo-vehicular-por-radares-2022.csv', sep=';')
+
+# Ajusto el nombre de las columnas
+colnames(dataset_2021) <- c("fecha","hora","autopista_nombre","disp_nombre","disp_ubicacion","seccion_sentido","lat","long","cantidad","extra")
+colnames(dataset_2022) <- c("fecha","hora","autopista_nombre","disp_nombre","disp_ubicacion","seccion_sentido","lat","long","cantidad")
+```
+
+```{r}
+# Genero una variable de tipo datetime
+dataset_2019[ , fecha_hora := as.POSIXct(paste(fecha, hora), format="%Y-%m-%d %H") ]
+dataset_2020[ , fecha_hora := as.POSIXct(paste(fecha, hora), format="%Y-%m-%d %H") ]
+dataset_2021[ , fecha_hora := as.POSIXct(paste(fecha, hora), format="%Y-%m-%d %H") ]
+dataset_2022[ , fecha_hora := as.POSIXct(paste(fecha, hora), format="%Y-%m-%d %H") ]
+```
+
+```{r}
+# Genero una variable de tipo datetime
+dataset_2019[ , fecha_hora := as.POSIXct(paste(fecha, hora), format="%Y-%m-%d %H") ]
+dataset_2020[ , fecha_hora := as.POSIXct(paste(fecha, hora), format="%Y-%m-%d %H") ]
+dataset_2021[ , fecha_hora := as.POSIXct(paste(fecha, hora), format="%Y-%m-%d %H") ]
+dataset_2022[ , fecha_hora := as.POSIXct(paste(fecha, hora), format="%Y-%m-%d %H") ]
 ```
