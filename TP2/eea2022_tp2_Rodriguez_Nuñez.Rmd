@@ -30,7 +30,9 @@ library(ggplot2)
 library(GGally)
 library(corrr)
 library(MASS)
+library(fpp2)
 library(data.table)
+library(stringr)
 ```
 
 ```{r}
@@ -48,14 +50,28 @@ colnames(dataset_2022) <- c("fecha","hora","autopista_nombre","disp_nombre","dis
 ```{r}
 # Genero una variable de tipo datetime
 dataset_2019[ , fecha_hora := as.POSIXct(paste(fecha, hora), format="%Y-%m-%d %H") ]
-dataset_2020[ , fecha_hora := as.POSIXct(paste(fecha, hora), format="%Y-%m-%d %H") ]
+
 # A partir de Octubre cambió el formato de fecha y està separado por '/' en lugar de '-'
-dataset_2020[ is.na(fecha_hora) , fecha_hora := as.POSIXct(paste(fecha, hora), format="%Y/%m/%d %H")]
+# junio tiene como año 2019 en lugar de 2020
+# agosto agrega la hora en el campo fecha, pero sin valor siempre 00:00:00
+# octubre el separador es '/'
+# noviembre y diciembre el formato de fecha cambió yy-mm-dd
+dataset_2020[ , fecha_hora := as.POSIXct(paste(fecha, hora), format="%Y-%m-%d %H") ]
+dataset_2020[ str_split(fecha, "-", simplify = TRUE)[,2] == "06" , fecha_hora := as.POSIXct(paste(str_replace(fecha, "2019", "2020"), hora), format="%Y-%m-%d %H")]
+dataset_2020[ str_split(fecha, "-", simplify = TRUE)[,2] == "08" , fecha_hora := as.POSIXct(paste(str_replace(fecha, " 00:00:00", ""), hora), format="%Y-%m-%d %H")]
+dataset_2020[ str_split(fecha, "/", simplify = TRUE)[,2] == "10" , fecha_hora := as.POSIXct(paste(fecha, hora), format="%Y/%m/%d %H")]
+dataset_2020[ str_split(fecha, "-", simplify = TRUE)[,2] == "11" , fecha_hora := as.POSIXct(paste(fecha, hora), format="%y-%m-%d %H")]
+dataset_2020[ str_split(fecha, "-", simplify = TRUE)[,2] == "12" , fecha_hora := as.POSIXct(paste(fecha, hora), format="%y-%m-%d %H")]
+
 # En 2021 el formato de fecha cambió a dd/mm/yy
-dataset_2021[ , fecha_hora := as.POSIXct(paste(fecha, hora), format="%Y-%m-%d %H") ]
+# En noviembre el formato de la fecha cambio a dd/mm/yyyy
 # En diciembre 2021 se empezó a utilizar otro campo, el cual denominamos hora_diciembre
-dataset_2021[ is.na(fecha_hora) , fecha_hora := as.POSIXct(paste(fecha, hora_diciembre), format="%Y/%m/%d %H")]
-dataset_2022[ , fecha_hora := as.POSIXct(paste(fecha, hora), format="%d/%m/%Y %H") ]
+dataset_2021[ , fecha_hora := as.POSIXct(paste(fecha, hora), format="%d/%m/%y %H") ]
+dataset_2021[ str_split(fecha, "/", simplify = TRUE)[,2] == "11" , fecha_hora := as.POSIXct(paste(fecha, hora), format="%d/%m/%Y %H")]
+dataset_2021[ str_split(fecha, "/", simplify = TRUE)[,2] == "12" , fecha_hora := as.POSIXct(paste(fecha, hora_diciembre), format="%d/%m/%Y %H")]
+
+# En 2022 la fecha volvió a cambiar a dd/mm/yy
+dataset_2022[ , fecha_hora := as.POSIXct(paste(fecha, hora), format="%d/%m/%y %H") ]
 ```
 
 
@@ -109,8 +125,119 @@ datos_faltantes_2022
 
 
 ```{r}
-# Espacio de pruebas
+# Genero el el dataset con las mediciones
+lugones_2019 = dataset_2019[ autopista_nombre == "AU 4  Lugones" , sum(cantidad) , by = fecha_hora]
+lugones_2020 = dataset_2020[ autopista_nombre == "AU 4  Lugones" , sum(cantidad) , by = fecha_hora]
+lugones_2021 = dataset_2021[ autopista_nombre == "AU 4  Lugones" , sum(cantidad) , by = fecha_hora]
+
+dataset_2019_2021 = rbindlist(list(lugones_2019,lugones_2020,lugones_2021))
+colnames(dataset_2019_2021) <- c("fecha_hora", "cantidad")
+
+# Finalmente los ordeno, por las dudas
+dataset_2019_2021 = dataset_2019_2021[ order(fecha_hora) , ]
+```
 
 
+```{r}
+
+summary(dataset_2019_2021)
+
+lugones_2019 = dataset_2019[ autopista_nombre == "AU 4  Lugones" , sum(cantidad) , by = fecha_hora]
+nrow(lugones_2019)
+
+dataset_2019_2021[order(cantidad, decreasing = TRUE)]
+2019-09-02 07:00:00	109058			
+2019-09-02 08:00:00	107090			
+2019-09-02 09:00:00	105980	
+
+dataset_2019[ autopista_nombre == "AU 4  Lugones" & str_split(fecha, "-", simplify = TRUE)[,2] == "09" , ]
+
+summary(dataset_2020)
+```
+
+
+```{r}
+data_serie_fecha=ts(dataset_2019_2021$cantidad, frequency = 8760, start=c(2019,1))
+autoplot(data_serie_fecha)+
+  labs(title = "Serie de tiempo",       
+       x = "Tiempo",
+       y = "Valor",
+       colour = "#00a0dc")+
+    theme_bw() 
+
+```
+```{r}
+# Descomposición de la serie de tiempo. Se almacena en el objeto fit
+fit <- decompose(data_serie_fecha, type='additive')
+#fit <- decompose(data_serie, type='multiplicative')
+
+# Para graficar esta descomposición volvemos a emplear la funcion autoplot, pero con el objeto fit
+autoplot(fit)+
+  labs(title = "Descomposición de la serie de tiempo",                   
+       x = "Tiempo",
+       y = "Valor",
+       colour = "Gears")+
+    theme_bw()
+```
+```{r}
+autoplot(data_serie_fecha, series="Serie tiempo") + 
+    autolayer(trendcycle(fit), series="Tendencia") +
+    labs(title = "Serie de tiempo",      
+       x = "Tiempo",
+       y = "Valor"
+       ) + 
+    theme_bw()
+```
+
+```{r}
+ggseasonplot(data_serie_fecha)
+```
+
+ARIMA
+
+```{r}
+modelo_arima <- auto.arima(data_serie_fecha)
+
+
+
+```
+
+```{r}
+
+dataset = dataset_2019[ autopista_nombre == "AU 4  Lugones" , sum(cantidad) , by = c("fecha_hora", "disp_nombre")]
+dataset
+
+dataset_2019[ , sum(cantidad) , by = c("fecha_hora", "autopista_nombre")]
+
+
+dataset = dataset_2019[ autopista_nombre == "AU 4  Lugones" ]
+dataset = rbind(dataset, dataset_2021)
+
+```
+
+```{r}
+
+tmp = dataset_2019[ autopista_nombre == "AU 4  Lugones" , sum(cantidad) , by = c("fecha", "hora")]
+
+dataset_matrix = dcast(tmp, fecha ~ hora, value.var = "V1")
+
+data_serie_matrix=ts(dataset_matrix, frequency = 7)
+autoplot(data_serie_matrix)+
+  labs(title = "Serie de tiempo",       
+       x = "Tiempo",
+       y = "Valor",
+       colour = "#00a0dc")+
+    theme_bw() 
+
+ggseasonplot(data_serie_matrix)
+
+
+modelo_arima <- auto.arima(data_serie_fecha)
+
+# elaborando el pronostico
+m4 <- forecast(modelo_arima, h=365)
+
+# graficando el pronóstico
+autoplot(m4)
 
 ```
