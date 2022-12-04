@@ -33,8 +33,13 @@ library(MASS)
 library(fpp2)
 library(data.table)
 library(stringr)
+library(dplyr)
+library(prophet)
+library(tseries)
 ```
 
+# Importación de datasets
+El primer paso fue importar los datasets y acomodar los nombres de las columnas para que sea homogéneo en todos los casos
 ```{r}
 # Cargo los datasets
 dataset_2019 = fread('./dataset/flujo-vehicular-por-radares-2019.csv', sep=',')
@@ -47,10 +52,48 @@ colnames(dataset_2021) <- c("fecha","hora","autopista_nombre","disp_nombre","dis
 colnames(dataset_2022) <- c("fecha","hora","autopista_nombre","disp_nombre","disp_ubicacion","seccion_sentido","lat","long","cantidad")
 ```
 
+# Exploración de los datos
+Realizamos una exploración sobre los datasets y encontramos que los formatos de las fechas varían de año a año, e incluso en un mismo año, algunos meses tienen formato diferente entre sí. Por lo que al evaluar los casos se procedió a realizar un ajuste de los mismos y a generar una nueva variable `fecha_hora` computado como un objeto datatime con la fecha y hora de la medición, el cual será utilizado luego como la unidad de las series de tiempo.
+
+```{r}
+unique(dataset_2019$fecha)
+unique(dataset_2020$fecha)
+unique(dataset_2021$fecha)
+unique(dataset_2022$fecha)
+```
+
+```{r}
+glimpse(dataset_2019)
+glimpse(dataset_2020)
+glimpse(dataset_2021)
+```
+
+Observamos que los registros tienen un sentido, por lo que validamos las combinaciones posibles para la AU 4 Lugones que es nuestro target.
+
+```{r}
+unique(dataset_2019[autopista_nombre == "AU 4  Lugones" , seccion_sentido])
+```
+
+Vemos que solo tiene un sentido, por lo que no nos preocuparemos en agrupar o filtrar un sentido particular.
+
+# Generación del indice fecha_hora
+Una vez que exploramos y verificamos las distintas variantes de fechas, procedemos a generar el id `fecha_hora` en base al análisis previo.
+
+## 2019
+El formato de fechas es homogéneo y en todos los casoes es `yyyy-mm-dd`
 ```{r}
 # Genero una variable de tipo datetime
 dataset_2019[ , fecha_hora := as.POSIXct(paste(fecha, hora), format="%Y-%m-%d %H") ]
+```
 
+## 2020
+  1. A partir de Octubre cambió el formato de fecha y está separado por '/' en lugar de '-'
+  2. junio tiene como año 2019 en lugar de 2020
+  3. agosto agrega la hora en el campo fecha, pero sin valor siempre 00:00:00
+  4. octubre el separador es '/'
+  5. noviembre y diciembre el formato de fecha cambió yy-mm-dd
+
+```{r}
 # A partir de Octubre cambió el formato de fecha y està separado por '/' en lugar de '-'
 # junio tiene como año 2019 en lugar de 2020
 # agosto agrega la hora en el campo fecha, pero sin valor siempre 00:00:00
@@ -62,18 +105,32 @@ dataset_2020[ str_split(fecha, "-", simplify = TRUE)[,2] == "08" , fecha_hora :=
 dataset_2020[ str_split(fecha, "/", simplify = TRUE)[,2] == "10" , fecha_hora := as.POSIXct(paste(fecha, hora), format="%Y/%m/%d %H")]
 dataset_2020[ str_split(fecha, "-", simplify = TRUE)[,2] == "11" , fecha_hora := as.POSIXct(paste(fecha, hora), format="%y-%m-%d %H")]
 dataset_2020[ str_split(fecha, "-", simplify = TRUE)[,2] == "12" , fecha_hora := as.POSIXct(paste(fecha, hora), format="%y-%m-%d %H")]
+```
 
+## 2021
+  1. En 2021 el formato de fecha cambió a dd/mm/yy
+  2. En noviembre el formato de la fecha cambio a dd/mm/yyyy
+  3. En diciembre 2021 se empezó a utilizar otro campo, el cual denominamos hora_diciembre
+
+```{r}
 # En 2021 el formato de fecha cambió a dd/mm/yy
 # En noviembre el formato de la fecha cambio a dd/mm/yyyy
 # En diciembre 2021 se empezó a utilizar otro campo, el cual denominamos hora_diciembre
 dataset_2021[ , fecha_hora := as.POSIXct(paste(fecha, hora), format="%d/%m/%y %H") ]
 dataset_2021[ str_split(fecha, "/", simplify = TRUE)[,2] == "11" , fecha_hora := as.POSIXct(paste(fecha, hora), format="%d/%m/%Y %H")]
 dataset_2021[ str_split(fecha, "/", simplify = TRUE)[,2] == "12" , fecha_hora := as.POSIXct(paste(fecha, hora_diciembre), format="%d/%m/%Y %H")]
+```
 
+## 2022
+En 2022 la fecha volvió a cambiar a dd/mm/yy
+
+```{r}
 # En 2022 la fecha volvió a cambiar a dd/mm/yy
 dataset_2022[ , fecha_hora := as.POSIXct(paste(fecha, hora), format="%d/%m/%y %H") ]
 ```
 
+## Validación de los resultados obtenidos
+Lo que buscamos verificar es que se hayan generado todos los registros de `fecha_hora` y que no haya datos faltantes.
 
 ```{r}
 datos_faltantes_2019 =  dataset_2019 %>%
@@ -123,6 +180,8 @@ datos_faltantes_2022 =  dataset_2022 %>%
 datos_faltantes_2022
 ```
 
+# Dataset para las series temporales
+Una vez que logramos ajustar los datasets originales, realizamos la generación del dataset a utilizar en los modelos, el cual consiste en el flujo total de vehículos para la autopista `AU 4  Lugones` agrupando por el índice computado previamente `fecha_hora` y finalmente ordenamos los registros por el índice para poder utilizarlo como input de las función ts()
 
 ```{r}
 # Genero el el dataset con las mediciones
@@ -130,34 +189,18 @@ lugones_2019 = dataset_2019[ autopista_nombre == "AU 4  Lugones" , sum(cantidad)
 lugones_2020 = dataset_2020[ autopista_nombre == "AU 4  Lugones" , sum(cantidad) , by = fecha_hora]
 lugones_2021 = dataset_2021[ autopista_nombre == "AU 4  Lugones" , sum(cantidad) , by = fecha_hora]
 
-dataset_2019_2021 = rbindlist(list(lugones_2019,lugones_2020,lugones_2021))
+dataset_2019_2021 = rbindlist(list(lugones_2019, lugones_2020, lugones_2021))
 colnames(dataset_2019_2021) <- c("fecha_hora", "cantidad")
 
 # Finalmente los ordeno, por las dudas
 dataset_2019_2021 = dataset_2019_2021[ order(fecha_hora) , ]
 ```
 
+# Exploración de la serie temporal
+Con el dataset generado, se procede a generar el objeto `ts` indicando una `frequency = 8760`, que es la cantidad de horas en un año e indicando `start=c(2019,1)` para que la referencia temporal de inicio sea Enero 2019.
 
 ```{r}
-
-summary(dataset_2019_2021)
-
-lugones_2019 = dataset_2019[ autopista_nombre == "AU 4  Lugones" , sum(cantidad) , by = fecha_hora]
-nrow(lugones_2019)
-
-dataset_2019_2021[order(cantidad, decreasing = TRUE)]
-2019-09-02 07:00:00	109058			
-2019-09-02 08:00:00	107090			
-2019-09-02 09:00:00	105980	
-
-dataset_2019[ autopista_nombre == "AU 4  Lugones" & str_split(fecha, "-", simplify = TRUE)[,2] == "09" , ]
-
-summary(dataset_2020)
-```
-
-
-```{r}
-data_serie_fecha=ts(dataset_2019_2021$cantidad, frequency = 8760, start=c(2019,1))
+data_serie_fecha = ts(dataset_2019_2021$cantidad, frequency = 8760, start=c(2019,1))
 autoplot(data_serie_fecha)+
   labs(title = "Serie de tiempo",       
        x = "Tiempo",
@@ -166,6 +209,7 @@ autoplot(data_serie_fecha)+
     theme_bw() 
 
 ```
+
 ```{r}
 # Descomposición de la serie de tiempo. Se almacena en el objeto fit
 fit <- decompose(data_serie_fecha, type='additive')
@@ -179,6 +223,7 @@ autoplot(fit)+
        colour = "Gears")+
     theme_bw()
 ```
+
 ```{r}
 autoplot(data_serie_fecha, series="Serie tiempo") + 
     autolayer(trendcycle(fit), series="Tendencia") +
@@ -190,54 +235,88 @@ autoplot(data_serie_fecha, series="Serie tiempo") +
 ```
 
 ```{r}
-ggseasonplot(data_serie_fecha)
+ggtsdisplay(data_serie_fecha)
 ```
 
-ARIMA
+# ARIMA
 
 ```{r}
-modelo_arima <- auto.arima(data_serie_fecha)
-
-
-
+ndiffs(data_serie_fecha)
 ```
 
 ```{r}
-
-dataset = dataset_2019[ autopista_nombre == "AU 4  Lugones" , sum(cantidad) , by = c("fecha_hora", "disp_nombre")]
-dataset
-
-dataset_2019[ , sum(cantidad) , by = c("fecha_hora", "autopista_nombre")]
-
-
-dataset = dataset_2019[ autopista_nombre == "AU 4  Lugones" ]
-dataset = rbind(dataset, dataset_2021)
-
+par(mfcol = c(1, 2))
+acf(data_serie_fecha) 
+pacf(data_serie_fecha)
 ```
 
 ```{r}
+par(mfcol = c(1, 1))
+x1 <- diff(data_serie_fecha)
+plot(x1, main="Tráfico en AU 4 Lugones. Diferencias Log.")
+```
 
-tmp = dataset_2019[ autopista_nombre == "AU 4  Lugones" , sum(cantidad) , by = c("fecha", "hora")]
+```{r}
+par(mfcol = c(1, 2))
+acf(x1) 
+pacf(x1)
+```
 
-dataset_matrix = dcast(tmp, fecha ~ hora, value.var = "V1")
+```{r}
+par(mfcol = c(1, 1))
+x1_12 <- diff(x1, 12)
+plot(x1_12, main="Tráfico en AU 4 Lugones. Diferencias Log. Estacionales")
+```
 
-data_serie_matrix=ts(dataset_matrix, frequency = 7)
-autoplot(data_serie_matrix)+
-  labs(title = "Serie de tiempo",       
-       x = "Tiempo",
-       y = "Valor",
-       colour = "#00a0dc")+
-    theme_bw() 
+```{r}
+par(mfcol = c(1, 2))
+acf(x1_12) 
+pacf(x1_12)
+```
 
-ggseasonplot(data_serie_matrix)
+```{r}
+ggtsdisplay(data_serie_fecha,main='Tráfico diario de la AU 4 Lugones')
+```
 
+```{r}
+ar(data_serie_fecha)$aic
+```
 
-modelo_arima <- auto.arima(data_serie_fecha)
+```{r}
+modelo_auto_arima <- auto.arima(data_serie_fecha)
 
+summary(modelo_auto_arima)
+```
+
+```{r}
 # elaborando el pronostico
-m4 <- forecast(modelo_arima, h=365)
+auto_arima_fc <- forecast(modelo_auto_arima, h=360)
 
 # graficando el pronóstico
-autoplot(m4)
+autoplot(auto_arima_fc)
 
+```
+
+```{r}
+summary(auto_arima_fc)
+```
+
+```{r}
+# verificando el ajuste del método
+autoplot(auto_arima_fc)+autolayer(fitted(auto_arima_fc), series="Ajuste")
+```
+
+```{r}
+# verificando los residuales
+checkresiduals(auto_arima_fc)
+```
+
+```{r}
+modelo_arima <- Arima(data_serie_fecha, order = c(5,1,3))
+summary(modelo_arima)
+```
+
+```{r}
+modelo_arima <- Arima(data_serie_fecha, order = c(2,1,3), list(order=c(5,1,3),period=12))
+summary(modelo_arima)
 ```
