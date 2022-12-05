@@ -36,6 +36,8 @@ library(stringr)
 library(dplyr)
 library(prophet)
 library(tseries)
+library(urca)
+library(aTSA)
 ```
 
 # Importación de datasets
@@ -180,7 +182,25 @@ datos_faltantes_2022 =  dataset_2022 %>%
 datos_faltantes_2022
 ```
 
-# Dataset para las series temporales
+
+# ARIMA
+
+El modelo ARIMA consta de las siguientes componentes (que, de hecho, le dan su nombre):
+
+   1. Autorregresiva (AR): asume que el valor de la serie en un determinado instante se corresponde
+con la combinación lineal de la función en instantes anteriores (hasta un número máximo
+determinado de ellos, llamado “p”), a lo que se adiciona un componente de error aleatorio. Es
+decir, la información presente de un evento está relacionada con los valores pasados.
+   2. Integración (I): se aplicarán sucesivas diferenciaciones en los casos en que las series muestren
+evidencia de no-estacionalidad.
+   3. Promedio Móvil (MA, del inglés moving average): asume que el valor observado en un instante
+se corresponde con un término de error aleatorio a lo que le adiciona una combinación lineal
+de errores aleatorios previos (hasta un número máximo de ellos, llamado “q”).
+
+
+Antes de generar el modelo ARIMA es necesario analizar la serie temporal y entender cuáles son sus carácteristicas para determiar el tipo de modelo que se debe generar y sus coeficientes (p, d, q).
+
+## Dataset para las series temporales
 Una vez que logramos ajustar los datasets originales, realizamos la generación del dataset a utilizar en los modelos, el cual consiste en el flujo total de vehículos para la autopista `AU 4  Lugones` agrupando por el índice computado previamente `fecha_hora` y finalmente ordenamos los registros por el índice para poder utilizarlo como input de las función ts()
 
 ```{r}
@@ -196,7 +216,8 @@ colnames(dataset_2019_2021) <- c("fecha_hora", "cantidad")
 dataset_2019_2021 = dataset_2019_2021[ order(fecha_hora) , ]
 ```
 
-# Exploración de la serie temporal
+
+## Exploración de la serie temporal
 Con el dataset generado, se procede a generar el objeto `ts` indicando una `frequency = 8760`, que es la cantidad de horas en un año e indicando `start=c(2019,1)` para que la referencia temporal de inicio sea Enero 2019.
 
 ```{r}
@@ -209,6 +230,14 @@ autoplot(data_serie_fecha)+
     theme_bw() 
 
 ```
+
+A continuación, se grafica la descomposición de las serie temporal para observar la tendencia `trend`, si presenta o no estacionalidad `seasonal` y por último el ruido o valor random presente en los datos, que figura como `reminders`, el cual es el resultado de restar la tendencia y la estacionalidad a los datos de la serie temporal `data`.
+
+
+Esta descomposición se basa en métodos elementales: 
+  - la tendencia se calcula con una media móvil
+  - el efecto estacional se calcula promediando los valores de cada unidad de tiempo para todos los periodos
+  - los residuos se obtienen restando a la serie observada las dos componentes anteriores. 
 
 ```{r}
 # Descomposición de la serie de tiempo. Se almacena en el objeto fit
@@ -224,63 +253,128 @@ autoplot(fit)+
     theme_bw()
 ```
 
-```{r}
-autoplot(data_serie_fecha, series="Serie tiempo") + 
-    autolayer(trendcycle(fit), series="Tendencia") +
-    labs(title = "Serie de tiempo",      
-       x = "Tiempo",
-       y = "Valor"
-       ) + 
-    theme_bw()
-```
+## Transformaciones básicas de una serie
+  - En el gráfico anterior se observa que la serie parece ser estacionaria, no se observa una marcada creciente o decreciente en las series, sino que se mantiene en rangos similares a lo largo del tiempo. 
+  - La serie presenta una tendencia decreciente y luego creciente, marcado por los meses de la pandemia.
+  - Parece haber una estacionalidad levemente marcada (meses de verano o vacaciones).
+  
+### Estabilización de la varianza
+Para estabilizar la variabilidad se suelen tomar logaritmos. Esta transformación funcionará bien cuando la variabilidad sea aproximadamente proporcional al nivel de la serie.
 
 ```{r}
-ggtsdisplay(data_serie_fecha)
+plot(log(data_serie_fecha))
 ```
+### Eliminación de tendencia
+Una forma sencilla de eliminar una tendencia es diferenciar la serie. Esto significa, considerar la serie de diferencias entre una observación y la anterior en lugar de la serie original. 
 
-# ARIMA
+$\Delta x_{t} = x_{t} - x_{t-1}$
 
 ```{r}
-ndiffs(data_serie_fecha)
+par(mfcol = c(1, 1))
+x1 <- diff(data_serie_fecha)
+plot(x1, main="Tráfico en AU 4 Lugones. Diferencias Lag.")
 ```
+
+### Eliminación de estacionalidad
+
+Para eliminar la estacionalidad de una serie mensual se pueden tomar diferencias estacionales de orden 12. Si $x_{t}$ es la serie que queremos desestacionalizar, se trata de calcular $\Delta_{12} x_{t} = x_{t} - x_{t-12}$
+
+Para nuestro caso, las muestras son por hora, por lo que intentaremos ver la estacionalidad semanal, por lo que probaremos un lag = 168 (7 * 24), correspondiente a la semana anterior
+
+```{r}
+par(mfcol = c(1, 1))
+x1_168 <- diff(x1, 168)
+plot(x1_168, main="Tráfico en AU 4 Lugones. Diferencias Lag Semanal")
+```
+
+
+## Autocorrelaciones simple y parcial
+
+A continuación, veremos el correlograma de la serie, el cual es una representación gráfica de las autocorrelaciones $\rho (k)$, es decir, las correlaciones entre $x_{t}$ y $x_{t+k}$, en función de $k$:
+
 
 ```{r}
 par(mfcol = c(1, 2))
 acf(data_serie_fecha) 
 pacf(data_serie_fecha)
 ```
-
-```{r}
-par(mfcol = c(1, 1))
-x1 <- diff(data_serie_fecha)
-plot(x1, main="Tráfico en AU 4 Lugones. Diferencias Log.")
-```
-
 ```{r}
 par(mfcol = c(1, 2))
-acf(x1) 
-pacf(x1)
+acf(x1_168) 
+pacf(x1_168)
+```
+
+### Generación del modelo
+
+Los valores de `ACF` van de -1 a 1. Un valor próximo a 1 indica una gran correlación entre intervalos, si es próximo a -1 la correlación es inversa, la medición actual tiende a subir cuando la anterior baja, y uno próximo a 0 significa que las columnas comparadas son independientes = no podemos predecirlos.
+
+La gráfica `PACF` es la derivada o pendiente de la `ACF` y nos indica la correlación parcial entre los intervalos, descontando el efecto del resto.
+
+Resulta que estas gráficas nos pueden dar los órdenes para ajustar un modelo ARIMA, la clave está en interpretarlas según la siguiente tabla:
+
+|   |AR(p)|MA(q)|ARMA(p,q)|
+|---|---|---|---|
+|ACF|varios puntos con coef>0 decayendo|0 excepto los q primeros	|varios puntos con coef>0 decayendo|
+|PACF|0 excepto los p primeros	|varios puntos con coef>0	|varios puntos con coef>0|
+
+Como regla, la `PACF` define el orden de `AR(p)` y la `ACF` el orden de `MA(q)`.
+
+Finalmente, nos falta obtener el orde $d$ el cual lo podemos calcular facilmente con la función `ndiffs()`
+
+```{r}
+ndiffs(data_serie_fecha)
+ndiffs(x1_168)
+```
+
+Con los resultados de los gráficos de correlación, podemos intentar generar un modelo 
+
+  - dataset original: ARIMA(4,1,3)
+  - lag 168: ARIMA(4,0,4)
+
+```{r}
+modelo_arima_413 <- Arima(data_serie_fecha, order = c(4,1,3))
+summary(modelo_arima_413)
+```
+
+Con la función `forecast` del package `forecast` podemos realizar la predicción del `horizon` deseado, en nuestro caso, estaremos intentando estimar los próximos 360 intervalos que corresponden a las próximas 2 semanas.
+
+```{r}
+# elaborando el pronostico
+modelo_arima_112_fc <- forecast::forecast(modelo_arima_413, h=360)
+
+# graficando el pronóstico
+autoplot(modelo_arima_112_fc)
 ```
 
 ```{r}
-par(mfcol = c(1, 1))
-x1_12 <- diff(x1, 12)
-plot(x1_12, main="Tráfico en AU 4 Lugones. Diferencias Log. Estacionales")
+# verificando los residuales
+checkresiduals(modelo_arima_112_fc)
 ```
 
 ```{r}
-par(mfcol = c(1, 2))
-acf(x1_12) 
-pacf(x1_12)
+modelo_arima_404 <- Arima(x1_168, order = c(4,0,4))
+summary(modelo_arima_404)
+```
+
+
+
+```{r}
+# elaborando el pronostico
+modelo_arima_404_fc <- forecast::forecast(modelo_arima_404, h=360)
+
+# graficando el pronóstico
+autoplot(modelo_arima_404_fc)
 ```
 
 ```{r}
-ggtsdisplay(data_serie_fecha,main='Tráfico diario de la AU 4 Lugones')
+# verificando los residuales
+checkresiduals(modelo_arima_404_fc)
 ```
 
-```{r}
-ar(data_serie_fecha)$aic
-```
+## Auto ARIMA
+
+Existe una forma simplificada de realizar los pasos anteriores y es a través de la función `auto.arima()`
+
 
 ```{r}
 modelo_auto_arima <- auto.arima(data_serie_fecha)
@@ -288,35 +382,11 @@ modelo_auto_arima <- auto.arima(data_serie_fecha)
 summary(modelo_auto_arima)
 ```
 
-```{r}
-# elaborando el pronostico
-auto_arima_fc <- forecast(modelo_auto_arima, h=360)
-
-# graficando el pronóstico
-autoplot(auto_arima_fc)
-
-```
 
 ```{r}
-summary(auto_arima_fc)
+modelo_auto_arima_168 <- auto.arima(x1_168)
+
+summary(modelo_auto_arima_168)
 ```
 
-```{r}
-# verificando el ajuste del método
-autoplot(auto_arima_fc)+autolayer(fitted(auto_arima_fc), series="Ajuste")
-```
-
-```{r}
-# verificando los residuales
-checkresiduals(auto_arima_fc)
-```
-
-```{r}
-modelo_arima <- Arima(data_serie_fecha, order = c(5,1,3))
-summary(modelo_arima)
-```
-
-```{r}
-modelo_arima <- Arima(data_serie_fecha, order = c(2,1,3), list(order=c(5,1,3),period=12))
-summary(modelo_arima)
-```
+Podemos observar que los resultados obtenidos son los mismos que habíamos estimado observado los gráficos de correlación.
