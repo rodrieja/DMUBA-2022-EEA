@@ -116,7 +116,7 @@ summary(dt_train)
 ```
 ## Modelos
 <br>
-Prophet contiene una serie de hiperparametros que sirven para controlar el **overfiting** en los tres componentes (tendencia, estacionalidad y holiday):
+Prophet contiene una serie de hiperparametros que sirven sobre todo para controlar el **overfiting** en los tres componentes (tendencia, estacionalidad y holiday), o adaptar el modelo a cuestiones de negocio:
 <br>
 <br>
 <ul>
@@ -226,7 +226,20 @@ La evaluacion de los modelos la vamos a realizar a partir de la funcion `cross_v
    
 ![](img/diagnostico_prophet.png)
 <br>
-*Grafico y descripcion obtenidos de* [*https://eea-uba.github.io/EEA-2022*](https://eea-uba.github.io/EEA-2022/clase%2011/prophet_shopping.nb.html#Evaluaci%C3%B3n_del_modelo)
+
+Una vez que se obtiene este dataframe se pueden obtener métricas de evaluación con la función `performance_metrics`. Definimos la proporción de datos que se utilizarán en cada ventana móvil para calcular las métricas (`rolling_window`).
+
+El procedimiento es el siguiente: 
+
+1. Se calcula el horizonte de predicción de cada observación: ds - cutoff
+2. Se ordena de menor a mayor horizonte
+3. Se calculan las métricas con la cantidad de observaciones definidas por **rolling_window**.  
+    a. Comienza realizandolo para cada horizonte
+    b. Si los datos dentro de un **horizonte** no son suficientes comienza a usar observaciones de horizontes aledaños.
+
+<br>
+
+*Grafico y explicación obtenidos de* [*https://eea-uba.github.io/EEA-2022*](https://eea-uba.github.io/EEA-2022/clase%2011/prophet_shopping.nb.html#Evaluaci%C3%B3n_del_modelo)
 
 ### Modelo inicial
 
@@ -240,12 +253,14 @@ cv_incial
 ```
 
 
+<br>
 ```{r}
-metricas <- performance_metrics(cv_incial, rolling_window = 0.25) 
-metricas
+metricas_inicial <- performance_metrics(cv_incial, rolling_window = 0.25) 
+metricas_inicial
 ```
 
 
+<br>
 
 ### Modelo sin Pandemia
 
@@ -258,7 +273,7 @@ cv_pandemia = cross_validation(m_pandemia, initial = 720, period = 168, horizon 
 cv_pandemia 
 ```
 
-
+<br>
 ```{r}
 metricas <- performance_metrics(cv_pandemia, rolling_window = 0.25) 
 metricas
