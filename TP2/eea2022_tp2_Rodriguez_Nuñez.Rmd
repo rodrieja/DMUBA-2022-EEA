@@ -282,8 +282,12 @@ Para eliminar la estacionalidad de una serie mensual se pueden tomar diferencias
 Para nuestro caso, las muestras son por hora, por lo que intentaremos ver la estacionalidad semanal, por lo que probaremos un lag = 168 (7 * 24), correspondiente a la semana anterior
 
 ```{r}
-par(mfcol = c(1, 1))
-x1_168 <- diff(x1, 168)
+par(mfcol = c(3, 1))
+x1_12 <- diff(data_serie_fecha, 12)
+x1_24 <- diff(data_serie_fecha, 24)
+x1_168 <- diff(data_serie_fecha, 168)
+plot(x1_12, main="Tráfico en AU 4 Lugones. Diferencias Lag Franja horaria")
+plot(x1_24, main="Tráfico en AU 4 Lugones. Diferencias Lag Diario")
 plot(x1_168, main="Tráfico en AU 4 Lugones. Diferencias Lag Semanal")
 ```
 
@@ -329,7 +333,7 @@ ndiffs(x1_168)
 Con los resultados de los gráficos de correlación, podemos intentar generar un modelo 
 
   - dataset original: ARIMA(4,1,3)
-  - lag 168: ARIMA(4,0,4)
+  - lag 168: ARIMA(1,0,8)
 
 ```{r}
 modelo_arima_413 <- Arima(data_serie_fecha, order = c(4,1,3))
@@ -340,35 +344,35 @@ Con la función `forecast` del package `forecast` podemos realizar la predicció
 
 ```{r}
 # elaborando el pronostico
-modelo_arima_112_fc <- forecast::forecast(modelo_arima_413, h=360)
+modelo_arima_413_fc <- forecast::forecast(modelo_arima_413, h=360)
 
 # graficando el pronóstico
-autoplot(modelo_arima_112_fc)
+autoplot(modelo_arima_413_fc)
 ```
 
 ```{r}
 # verificando los residuales
-checkresiduals(modelo_arima_112_fc)
+checkresiduals(modelo_arima_413_fc)
 ```
 
 ```{r}
-modelo_arima_404 <- Arima(x1_168, order = c(4,0,4))
-summary(modelo_arima_404)
+modelo_arima_108 <- Arima(x1_168, order = c(1,0,8))
+summary(modelo_arima_108)
 ```
 
 
 
 ```{r}
 # elaborando el pronostico
-modelo_arima_404_fc <- forecast::forecast(modelo_arima_404, h=360)
+modelo_arima_108_fc <- forecast::forecast(modelo_arima_108, h=360)
 
 # graficando el pronóstico
-autoplot(modelo_arima_404_fc)
+autoplot(modelo_arima_108_fc)
 ```
 
 ```{r}
 # verificando los residuales
-checkresiduals(modelo_arima_404_fc)
+checkresiduals(modelo_arima_108_fc)
 ```
 
 ## Auto ARIMA
@@ -389,4 +393,16 @@ modelo_auto_arima_168 <- auto.arima(x1_168)
 summary(modelo_auto_arima_168)
 ```
 
-Podemos observar que los resultados obtenidos son los mismos que habíamos estimado observado los gráficos de correlación.
+```{r}
+# elaborando el pronostico
+modelo_auto_arima_168_fc <- forecast::forecast(modelo_auto_arima_168, h=360)
+
+# graficando el pronóstico
+autoplot(modelo_auto_arima_168_fc)
+```
+
+```{r}
+# verificando los residuales
+checkresiduals(modelo_auto_arima_168_fc)
+```
+
